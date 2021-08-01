@@ -1,5 +1,5 @@
 {
-  "name": "fails-components-data",
+  "name": "@martenrichter/fails-components-data",
   "version": "0.0.0",
   "description": "Supplies data format classes for use within the fails ecosystem",
   "author": "Marten Richter",
