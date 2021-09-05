@@ -67,7 +67,7 @@ export class Sink {
     // do nothing in base class
   }
 
-  scrollBoard(time, x, y) {
+  scrollBoard(time, clientnum, x, y) {
     // do nothing in base class
   }
 
@@ -109,7 +109,7 @@ export class DrawArea extends Sink {
     this.commitInterval(this.newmin, this.newmax)
   }
 
-  scrollBoard(time, x, y) {
+  scrollBoard(time, clientnum, x, y) {
     // do ... nothing....
   }
 
@@ -265,7 +265,7 @@ export class DrawArea2 extends Sink {
     // nothing to do
   }
 
-  scrollBoard(time, x, y) {
+  scrollBoard(time, clientnum, x, y) {
     // do ... nothing....
   }
 
@@ -408,7 +408,8 @@ export class Container extends Sink {
     this.cursubobj = 0
   }
 
-  scrollBoard(time, x, y) {
+  scrollBoard(time, clientnum, x, y) {
+    // clientnum is ignored, only relevant for live scrolling
     const tempbuffer = new ArrayBuffer(32) // actually it is a waste, but may be we need it later
     const dataview = new DataView(tempbuffer)
 
@@ -824,8 +825,8 @@ export class Collection extends Sink {
     )
   }
 
-  scrollBoard(time, x, y) {
-    this.commandcontainer.scrollBoard(time, x, y)
+  scrollBoard(time, clientnum, x, y) {
+    this.commandcontainer.scrollBoard(time, clientnum, x, y)
   }
 
   suggestRedraw(minareadrawn, maxareadrawn, curpostop, curposbottom) {
@@ -1049,13 +1050,13 @@ export class Dispatcher extends Sink {
     }
   }
 
-  scrollBoard(time, x, y) {
+  scrollBoard(time, clientnum, x, y) {
     this.setTimeandScrollPos(time, x, y)
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
     let i
     for (i = 0; i < this.datasinklist.length; i++) {
-      this.datasinklist[i].scrollBoard(timeset, x, y)
+      this.datasinklist[i].scrollBoard(timeset, clientnum, x, y)
     }
   }
 
@@ -1156,10 +1157,11 @@ export class NetworkSink extends Sink {
     this.sendfunc(outobj)
   }
 
-  scrollBoard(time, x, y) {
+  scrollBoard(time, clientnum, x, y) {
     const outobj = {}
     outobj.task = 'scrollBoard'
     outobj.time = time
+    outobj.clientnum = clientnum
     outobj.x = x
     outobj.y = y
     this.sendfunc(outobj)
@@ -1207,7 +1209,7 @@ export class NetworkSource {
 
         break
       case 'scrollBoard':
-        sink.scrollBoard(data.time, data.x, data.y)
+        sink.scrollBoard(data.time, data.clientnum, data.x, data.y)
 
         break
       case 'addPicture':
