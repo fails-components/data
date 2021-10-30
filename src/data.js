@@ -1234,7 +1234,26 @@ export class DrawObject {
   constructor(type, objid) {
     this.type = type
     this.version = 0
+    this.cacheversion = -1
+    this.cacheid = -1
     this.objid = objid
+  }
+
+  getRenderCache(id) {
+    if (this.cacheversion === this.version && this.cacheid === id)
+      return this.rendercache
+    else this.rendercache = null
+    return null
+  }
+
+  setRenderCache(id, cache) {
+    this.rendercache = cache
+    this.cacheid = id
+    this.cacheversion = this.version
+  }
+
+  clearRenderCache() {
+    this.rendercache = null
   }
 }
 
@@ -1251,6 +1270,7 @@ export class DrawObjectPicture extends DrawObject {
     this.uuid = uuid
     this.url = url
     this.mimetype = mimetype
+    this.clearRenderCache()
   }
 }
 
@@ -1294,6 +1314,7 @@ export class DrawObjectGlyph extends DrawObject {
     }
 
     this.version++ // increment version
+    this.clearRenderCache()
   }
 
   addToPath(x, y, pressure) {
@@ -1338,11 +1359,13 @@ export class DrawObjectGlyph extends DrawObject {
     }
     this.pressure = curpress
     this.version++ // increment version
+    this.clearRenderCache()
   }
 
   finishPath() {
     // so far a nop
     this.version++ // increment version
+    this.clearRenderCache()
   }
 
   SVGPath() {
