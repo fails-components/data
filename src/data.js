@@ -491,13 +491,13 @@ export class MemContainer extends Container {
       this.storage = new ArrayBuffer(this.storageAllocSize)
     }
     this.storageSize = data.byteLength
-    console.log(
+    /* console.log(
       'replaceStorage data bl',
       data,
       data.byteLength,
       this.storageSize,
       this
-    )
+    ) */
     new Uint8Array(this.storage).set(new Uint8Array(data)) // copy data
   }
 
