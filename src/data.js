@@ -375,7 +375,11 @@ export class Container extends Sink {
     dataview.setUint16(1, 24) // length  1..2
     dataview.setUint8(3, curclient) // reserved 3;
     dataview.setUint32(4, objnum) // 4.. 7
-    dataview.setFloat32(8, time - this.lasttime[objnum]) // 8..11
+    if (objnum in this.lasttime){
+      dataview.setFloat32(8, time - this.lasttime[objnum]) // 8..11
+    } else {
+      dataview.setFloat32(8, 0) // 8..11
+    }
 
     this.lasttime[objnum] = time // store time for simple header
     this.cursubobj++
@@ -398,7 +402,11 @@ export class Container extends Sink {
     dataview.setUint16(1, 12) // length  1..2
     dataview.setUint8(3, curclient) // reserved 3;
     dataview.setUint32(4, objnum) // 4.. 7
-    dataview.setFloat32(8, time - this.lasttime[objnum]) // 8..11
+    if (objnum in this.lasttime){
+      dataview.setFloat32(8, time - this.lasttime[objnum]) // 8..11
+    } else {
+      dataview.setFloat32(8, 0) // 8..11
+    }
 
     // this.lasttime=time; // store time for simple header
     delete this.lasttime[objnum]
@@ -767,6 +775,9 @@ export class Collection extends Sink {
   }
 
   addToPath(time, objnum, curclient, x, y, pressure) {
+    if (!(objnum in this.lastcontainer)) {
+      this.lastcontainer[objnum] = Math.floor(y) // may be not optimal, but better than nothing
+    }
     const storagenum = this.lastcontainer[objnum] // in Normalized coordinates we have rectangular areas
     // console.log("strnm atp",storagenum);
     if (!(storagenum in this.containers)) {
@@ -788,6 +799,10 @@ export class Collection extends Sink {
   }
 
   finishPath(time, objnum, curclient) {
+    if (!(objnum in this.lastcontainer)) {
+      // we have to skip it, no guess possible
+      return
+    }
     const storagenum = this.lastcontainer[objnum] // in Normalized coordinates we have rectangular areas
     // console.log("strnm fp",storagenum);
     if (!(storagenum in this.containers)) {
@@ -1237,6 +1252,7 @@ export class DrawObject {
     this.cacheversion = -1
     this.cacheid = -1
     this.objid = objid
+    this.preview = false
   }
 
   getRenderCache(id) {
@@ -1254,6 +1270,17 @@ export class DrawObject {
 
   clearRenderCache() {
     this.rendercache = null
+  }
+
+  setPreview(preview) {
+    if (this.preview !== preview) {
+      this.preview = preview
+      this.clearRenderCache()
+    }
+  }
+
+  getPreview() {
+    return this.preview
   }
 }
 
