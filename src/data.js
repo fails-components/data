@@ -1441,9 +1441,10 @@ export class DrawObjectGlyph extends DrawObject {
           dy = curpoint.y - glyph.pathpoints[i - 1].y
           norm = Math.sqrt(dx * dx + dy * dy)
         }
-
-        dx *= 1 / norm
-        dy *= 1 / norm
+        if (norm > 0) {
+          dx *= 1 / norm
+          dy *= 1 / norm
+        }
         // now use cross product with (0,0,1)
         const nx = dy * curpoint.w * 0.5
         const ny = -dx * curpoint.w * 0.5
