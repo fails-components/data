@@ -74,10 +74,19 @@ export class Sink {
   addPicture(time, objnum, curclient, x, y, width, height, uuid) {
     // do nothing in base class
   }
+
+  deleteObject(time, objnum, curclient, storagenum) {
+    // do nothing in base class
+  }
+
+  moveObject(time, objnum, curclient, x, y) {
+    // do nothing in base class, note a change of storagenum is not allowed
+  }
 }
 
 // this object determines the area covered with drawings
 // it is used for finding the best position for a pagebreak in a pdf
+/*
 export class DrawArea extends Sink {
   constructor() {
     super()
@@ -115,6 +124,10 @@ export class DrawArea extends Sink {
 
   addPicture(time, objnum, curclient, x, y, width, height, uuid) {
     this.commitInterval(y, y + height)
+  }
+
+  deleteObject(time, objnum, curclient) {
+    // do nothing in base class
   }
 
   commitInterval(min, max) {
@@ -213,10 +226,12 @@ export class DrawArea extends Sink {
     return selpagebreak
   }
 }
+*/
 
 // this object determines the area covered with drawings, New Implementation
 // it is used for finding the best position for a pagebreak in a pdf
-export class DrawArea2 extends Sink {
+// TODO rewrite using objects
+/* export class DrawArea2 extends Sink {
   constructor() {
     super()
     this.numslicesheight = (1.41 * 3) / 297 // the slice height to be roughly 3 mm
@@ -269,6 +284,10 @@ export class DrawArea2 extends Sink {
     // do ... nothing....
   }
 
+  deleteObject(time, objnum, curclient, storagenum) {
+    // do nothing in base class
+  }
+
   addPicture(time, objnum, curclient, x, y, width, height, uuid) {
     const sliceposstart = Math.round(y / this.numslicesheight)
     const sliceposend = Math.round((y + height) / this.numslicesheight)
@@ -311,13 +330,12 @@ export class DrawArea2 extends Sink {
     }
     return selpagebreak
   }
-}
+} */
 
 export class Container extends Sink {
   constructor() {
     super()
     // this.maxobjectnumber=0;
-    this.cursubobj = 0
     this.lasttime = {}
   }
 
@@ -359,7 +377,6 @@ export class Container extends Sink {
     let intpress = 0.5
     if (pressure) intpress = pressure
     dataview.setFloat32(32, intpress) // 32-35
-    this.cursubobj = 1
     this.curobjnum = objnum
 
     this.pushArrayToStorage(tempbuffer)
@@ -375,14 +392,13 @@ export class Container extends Sink {
     dataview.setUint16(1, 24) // length  1..2
     dataview.setUint8(3, curclient) // reserved 3;
     dataview.setUint32(4, objnum) // 4.. 7
-    if (objnum in this.lasttime){
+    if (objnum in this.lasttime) {
       dataview.setFloat32(8, time - this.lasttime[objnum]) // 8..11
     } else {
       dataview.setFloat32(8, 0) // 8..11
     }
 
     this.lasttime[objnum] = time // store time for simple header
-    this.cursubobj++
 
     dataview.setFloat32(12, x) // 12-15
     dataview.setFloat32(16, y) // 16-19
@@ -402,7 +418,7 @@ export class Container extends Sink {
     dataview.setUint16(1, 12) // length  1..2
     dataview.setUint8(3, curclient) // reserved 3;
     dataview.setUint32(4, objnum) // 4.. 7
-    if (objnum in this.lasttime){
+    if (objnum in this.lasttime) {
       dataview.setFloat32(8, time - this.lasttime[objnum]) // 8..11
     } else {
       dataview.setFloat32(8, 0) // 8..11
@@ -412,8 +428,6 @@ export class Container extends Sink {
     delete this.lasttime[objnum]
 
     this.pushArrayToStorage(tempbuffer)
-
-    this.cursubobj = 0
   }
 
   scrollBoard(time, clientnum, x, y) {
@@ -466,6 +480,37 @@ export class Container extends Sink {
       dataview.setUint8(dest, parseInt(id.substr(i, 2), 16))
       dest++
     }
+
+    this.pushArrayToStorage(tempbuffer)
+  }
+
+  deleteObject(time, objnum, curclient, storagenum) {
+    const tempbuffer = new ArrayBuffer(16)
+    const dataview = new DataView(tempbuffer)
+
+    // short header 8 Bytes
+    dataview.setUint8(0, 7) // major command type, delete object is  7
+    dataview.setUint16(1, 16) // length  1..2
+    dataview.setUint8(3, curclient) // reserved 3;
+    dataview.setUint32(4, objnum) // 4.. 7
+    dataview.setFloat64(8, time) // 8..15
+
+    this.pushArrayToStorage(tempbuffer)
+  }
+
+  moveObject(time, objnum, curclient, x, y) {
+    const tempbuffer = new ArrayBuffer(24)
+    const dataview = new DataView(tempbuffer)
+
+    // short header 8 Bytes
+    dataview.setUint8(0, 8) // major command type, move object is 8
+    dataview.setUint16(1, 24) // length  1..2
+    dataview.setUint8(3, curclient) // reserved 3;
+    dataview.setUint32(4, objnum) // 4.. 7
+    dataview.setFloat64(8, time) // 8..15
+
+    dataview.setFloat32(16, x) // 16-19
+    dataview.setFloat32(16, y) // 20-23
 
     this.pushArrayToStorage(tempbuffer)
   }
@@ -538,6 +583,14 @@ export class MemContainer extends Container {
         time = dataview.getFloat64(position + 8)
 
         break
+      case 7:
+        if (position + 16 > this.storageSize) return 0 // should never happen
+        time = dataview.getFloat64(position + 8)
+        break
+      case 8:
+        if (position + 24 > this.storageSize) return 0 // should never happen
+        time = dataview.getFloat64(position + 8)
+        break
     }
     return time
   }
@@ -551,14 +604,20 @@ export class MemContainer extends Container {
       case 3:
       case 4:
       case 0:
+      case 7:
         if (position + 16 > this.storageSize) return 0 // should never happen
         objnum = dataview.getUint32(position + 4)
 
         break
       case 1:
+      case 8:
+        if (position + 24 > this.storageSize) return 0 // should never happen
+        objnum = dataview.getUint32(position + 4)
+
+        break
       case 2:
-        if (position + 8 > this.storageSize) return 0 // should never happen
-        objnum++
+        if (position + 12 > this.storageSize) return 0 // should never happen
+        objnum = dataview.getUint32(position + 4)
 
         break
       case 5:
@@ -629,7 +688,6 @@ export class MemContainer extends Container {
           dataview.getFloat32(pos + 16),
           length < 24 ? 0.5 : dataview.getFloat32(pos + 20)
         )
-
         break
       case 2:
         if (length < 12) {
@@ -669,6 +727,19 @@ export class MemContainer extends Container {
             nid
           )
         }
+        break
+      case 7:
+        // now replay the data
+        if (length < 16) {
+          return -1 // damaged data
+        }
+        datasink.deleteObject(
+          dataview.getFloat64(pos + 8),
+          dataview.getUint32(pos + 4),
+          dataview.getUint8(pos + 3),
+          null
+        )
+
         break
     }
 
@@ -838,6 +909,35 @@ export class Collection extends Sink {
       height,
       uuid
     )
+  }
+
+  deleteObject(time, objnum, curclient, storagenum) {
+    if (!Number.isInteger(storagenum)) return
+    if (!(storagenum in this.containers)) {
+      // TODO for the network case sync with server
+      this.containers[storagenum] = this.containertype(
+        storagenum,
+        this.containerconfig
+      )
+    }
+    this.containers[storagenum].deleteObject(
+      time,
+      objnum,
+      curclient,
+      storagenum
+    )
+  }
+
+  moveObject(time, objnum, curclient, x, y) {
+    const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
+    if (!(storagenum in this.containers)) {
+      // TODO for the network case sync with server
+      this.containers[storagenum] = this.containertype(
+        storagenum,
+        this.containerconfig
+      )
+    }
+    this.containers[storagenum].moveObject(time, objnum, curclient, x, y)
   }
 
   scrollBoard(time, clientnum, x, y) {
@@ -1104,6 +1204,32 @@ export class Dispatcher extends Sink {
     }
   }
 
+  deleteObject(time, objnum, curclient, storagenum) {
+    if (this.blocked) return
+    let client = curclient
+    if (!curclient) client = this.curclientnum
+    let timeset = time
+    if (!timeset) timeset = now() - this.starttime
+
+    let i
+    for (i = 0; i < this.datasinklist.length; i++) {
+      this.datasinklist[i].deleteObject(timeset, objnum, client, storagenum)
+    }
+  }
+
+  moveObject(time, objnum, curclient, x, y) {
+    if (this.blocked) return
+    let client = curclient
+    if (!curclient) client = this.curclientnum
+    let timeset = time
+    if (!timeset) timeset = now() - this.starttime
+
+    let i
+    for (i = 0; i < this.datasinklist.length; i++) {
+      this.datasinklist[i].moveObject(timeset, objnum, client, x, y)
+    }
+  }
+
   setTimeandScrollPos(time, scrollx, scrolly) {
     if (time) {
       // time= now()-starttime
@@ -1181,6 +1307,27 @@ export class NetworkSink extends Sink {
     outobj.y = y
     this.sendfunc(outobj)
   }
+
+  deleteObject(time, objnum, curclient, storagenum) {
+    const outobj = {}
+    outobj.task = 'deleteObject'
+    outobj.time = time
+    outobj.objnum = objnum
+    outobj.clientnum = curclient
+    outobj.storagenum = storagenum
+    this.sendfunc(outobj)
+  }
+
+  moveObject(time, objnum, curclient, x, y) {
+    const outobj = {}
+    outobj.task = 'moveObject'
+    outobj.time = time
+    outobj.objnum = objnum
+    outobj.clientnum = curclient
+    outobj.x = x
+    outobj.y = y
+    this.sendfunc(outobj)
+  }
 }
 
 export class NetworkSource {
@@ -1241,6 +1388,17 @@ export class NetworkSource {
         )
 
         break
+      case 'deleteObject':
+        sink.deleteObject(
+          data.time,
+          data.objnum,
+          data.clientnum,
+          data.storagenum
+        )
+        break
+      case 'moveObject':
+        sink.moveObject(data.time, data.objnum, data.clientnum, data.x, data.y)
+        break
     }
   }
 }
@@ -1299,6 +1457,28 @@ export class DrawObjectPicture extends DrawObject {
     this.mimetype = mimetype
     this.clearRenderCache()
   }
+
+  getWeightSlices(numslicesheight) {
+    const toret = []
+    const sliceposstart = Math.round(this.posy / numslicesheight)
+    const sliceposend = Math.round((this.posy + this.height) / numslicesheight)
+    const sliceweight = numslicesheight * this.width * 0.2 // adjust the factor
+
+    for (let slicepos = sliceposstart; slicepos < sliceposend; slicepos++) {
+      toret.push({
+        weight: sliceweight,
+        pos: slicepos,
+        min: this.posy,
+        max: this.posy + this.height
+      })
+    }
+    return toret
+  }
+
+  moveObject(x, y) {
+    this.posx = x
+    this.posy = y
+  }
 }
 
 export class DrawObjectGlyph extends DrawObject {
@@ -1307,6 +1487,11 @@ export class DrawObjectGlyph extends DrawObject {
     this.svgscale = 2000 // should be kept constant
     this.svgpathversion = -1
     this.svgpathstring = null
+  }
+
+  storagenum() {
+    if (this.pathpoints && this.pathpoints.length > 0)
+      return Math.floor(this.pathpoints[0].y)
   }
 
   startPath(x, y, type, color, width, pressure) {
@@ -1375,7 +1560,6 @@ export class DrawObjectGlyph extends DrawObject {
 
     const ws = this.area
     const pw = wpenw
-
     this.lastpoint = { x: px, y: py }
     this.pathpoints.push({ x: px, y: py, w: pw })
     this.area = {
@@ -1393,6 +1577,19 @@ export class DrawObjectGlyph extends DrawObject {
     // so far a nop
     this.version++ // increment version
     this.clearRenderCache()
+  }
+
+  moveObject(x, y) {
+    if (this.pathpoints && this.pathpoints.length > 0) {
+      const rx = x * this.svgscale - this.pathpoints[0].x
+      const ry = y * this.svgscale - this.pathpoints[0].y
+      for (let ind = 0; ind < this.pathpoints.length; ind++) {
+        this.pathpoints[ind].x += rx
+        this.pathpoints[ind].y += ry
+      }
+      this.version++ // increment version
+      this.clearRenderCache()
+    }
   }
 
   SVGPath() {
@@ -1544,5 +1741,187 @@ export class DrawObjectGlyph extends DrawObject {
       // console.log("single point svg", this.svgpathstring);
       return this.svgpathstring
     } else return null
+  }
+
+  getWeightSlices(numslicesheight) {
+    const glyph = this
+    const toret = []
+    const lastpoint = glyph.pathpoints[0]
+    for (let i = 1; i < glyph.pathpoints.length; i++) {
+      const curpoint = glyph.pathpoints[i]
+      if (isNaN(curpoint.x) || isNaN(curpoint.y) || isNaN(curpoint.w)) continue
+      const weight =
+        (Math.sqrt(
+          (lastpoint.x - curpoint.x) * (lastpoint.x - curpoint.x) +
+            (lastpoint.y - curpoint.y) * (lastpoint.y - curpoint.y)
+        ) *
+          curpoint.w) /
+        this.svgscale /
+        this.svgscale
+      const slicepos = Math.round(
+        ((lastpoint.y + curpoint.y) * 0.5) / this.svgscale / numslicesheight
+      )
+      toret.push({
+        weight: weight,
+        pos: slicepos,
+        min: (curpoint.y - curpoint.w) / this.svgscale,
+        max: (curpoint.y + curpoint.w) / this.svgscale
+      })
+    }
+
+    return toret
+  }
+}
+
+export class DrawObjectContainer extends Sink {
+  constructor(args) {
+    super()
+    if (args && args.info && args.info.usedpictures)
+      this.pictures = args.info.usedpictures
+    else this.pictures = []
+    this.resetDrawing()
+  }
+
+  resetDrawing() {
+    this.objects = []
+    this.workobj = {}
+  }
+
+  addPicture(time, objnum, curclient, x, y, width, height, uuid) {
+    const pictinfo = this.pictures.find((el) => el.sha === uuid)
+
+    const addpict = new DrawObjectPicture(objnum)
+
+    addpict.addPicture(
+      x,
+      this.yoffset ? y - this.yoffset : y,
+      width,
+      height,
+      uuid,
+      pictinfo ? pictinfo.url : null,
+      pictinfo ? pictinfo.mimetype : null
+    )
+
+    this.objects.push(addpict)
+  }
+
+  startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
+    this.workobj[objnum] = new DrawObjectGlyph(objnum)
+    this.objects.push(this.workobj[objnum])
+    this.workobj[objnum].startPath(
+      x,
+      this.yoffset ? y - this.yoffset : y,
+      type,
+      color,
+      w,
+      pressure
+    )
+  }
+
+  addToPath(time, objid, curclient, x, y, pressure) {
+    if (this.workobj[objid]) {
+      // TODO handle objid
+      this.workobj[objid].addToPath(
+        x,
+        this.yoffset ? y - this.yoffset : y,
+        pressure
+      )
+    }
+  }
+
+  finishPath(time, objid, curclient) {
+    if (this.workobj[objid]) {
+      this.workobj[objid].finishPath()
+      delete this.workobj[objid]
+    }
+  }
+
+  scrollBoard(time, x, y) {
+    // do ... nothing....
+  }
+
+  deleteObject(time, objnum, curclient, storagenum) {
+    if (this.workobj[objnum]) {
+      delete this.workobj[objnum]
+    }
+    this.objects = this.objects.filter((el) => el.objid !== objnum)
+  }
+
+  moveObject(time, objnum, curclient, x, y) {
+    if (!this.objects) return
+    this.objects.forEach((el) => {
+      if (el.objid === objnum) {
+        el.moveObject(x, y)
+      }
+    })
+  }
+}
+
+// this object determines the area covered with drawings, New Implementation
+// it is used for finding the best position for a pagebreak in a pdf
+// TODO rewrite using objects
+export class DrawArea3 extends DrawObjectContainer {
+  constructor(args) {
+    super(args)
+    this.numslicesheight = (1.41 * 3) / 297 // the slice height to be roughly 3 mm
+    this.slices = []
+
+    this.newx = 0
+    this.newy = 0
+    this.curw = 0
+    this.intervals = []
+
+    this.glomin = 0
+    this.glomax = 0
+
+    this.addSlice = this.addSlice.bind(this)
+  }
+
+  addSlice(slice) {
+    this.weightscalculated = false
+    if (typeof this.slices[slice.spos] === 'undefined')
+      this.slices[slice.pos] = slice.weight
+    else this.slices[slice.pos] += slice.weight
+    this.glomin = Math.min(this.glomin, slice.min)
+    this.glomax = Math.max(this.glomin, slice.min)
+  }
+
+  calculateWeights() {
+    for (let ind = 0; ind < this.objects.length; ind++) {
+      if (this.objects[ind]) {
+        const slices = this.objects[ind].getWeightSlices(this.numslicesheight)
+        slices.forEach(this.addSlice)
+      }
+    }
+  }
+
+  findPagebreak(pagemin, pagemax) {
+    let lastquality = 1000
+    let selpagebreak = pagemax
+
+    const maxslicepos = Math.round(pagemax / this.numslicesheight)
+    const minslicepos = Math.round(pagemin / this.numslicesheight)
+    // console.log("findPageBreak",maxslicepos,minslicepos);
+
+    for (let index = maxslicepos; index >= minslicepos; index--) {
+      const pagebreak = (index + 0.5) * this.numslicesheight
+
+      let density = 0.00001 * 0
+
+      if (typeof this.slices[index] !== 'undefined') {
+        density += this.slices[index]
+      }
+      // console.log("Test slice",density,index,pagebreak,this.slices[index]);
+
+      const quality =
+        density * (1 + 4 * (pagemax - pagebreak) * (pagemax - pagebreak))
+      // console.log("qua,lqual",quality,lastquality);
+
+      if (quality < lastquality) {
+        selpagebreak = pagebreak
+        lastquality = quality
+      }
+    }
+    return selpagebreak
   }
 }
