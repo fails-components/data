@@ -1587,6 +1587,10 @@ export class DrawObjectGlyph extends DrawObject {
         this.pathpoints[ind].x += rx
         this.pathpoints[ind].y += ry
       }
+      this.area.left += rx
+      this.area.right += rx
+      this.area.top += ry
+      this.area.bottom += ry
       this.version++ // increment version
       this.clearRenderCache()
     }
