@@ -1411,6 +1411,7 @@ export class DrawObject {
     this.cacheid = -1
     this.objid = objid
     this.preview = false
+    this.selected = false
   }
 
   getRenderCache(id) {
@@ -1440,11 +1441,30 @@ export class DrawObject {
   getPreview() {
     return this.preview
   }
+
+  getArea() {
+    return null
+  }
+
+  select() {
+    this.selected = true
+    this.clearRenderCache()
+  }
+
+  isSelected() {
+    return this.selected
+  }
+
+  deselect() {
+    this.selected = false
+    this.clearRenderCache()
+  }
 }
 
 export class DrawObjectPicture extends DrawObject {
   constructor(objid) {
     super('image', objid)
+    this.svgscale = 2000 // should be kept constant
   }
 
   addPicture(x, y, width, height, uuid, url, mimetype) {
@@ -1479,12 +1499,68 @@ export class DrawObjectPicture extends DrawObject {
     this.posx = x
     this.posy = y
   }
+
+  doPointTest(testobj) {
+    // four corners
+    if (
+      !testobj.pointTest({
+        x: this.posx * this.svgscale,
+        y: this.posy * this.svgscale
+      })
+    )
+      return false
+    if (
+      !testobj.pointTest({
+        x: (this.posx + this.width) * this.svgscale,
+        y: this.posy * this.svgscale
+      })
+    )
+      return false
+    if (
+      !testobj.pointTest({
+        x: (this.posx + this.width) * this.svgscale,
+        y: (this.posy + this.height) * this.svgscale
+      })
+    )
+      return false
+    if (
+      !testobj.pointTest({
+        x: this.posx * this.svgscale,
+        y: (this.posy + this.height) * this.svgscale
+      })
+    )
+      return false
+    const dscan = 0.2 // 5 by 5 and yes we double test the corners
+    for (let scanx = 0; scanx <= 1.0; scanx += dscan) {
+      for (let scany = 0; scany <= 1.0; scany += dscan) {
+        if (
+          !testobj.pointTest({
+            x: (this.posx + this.width * scanx) * this.svgscale,
+            y: (this.posy + this.height * scany) * this.svgscale
+          })
+        )
+          return false
+      }
+    }
+
+    return true
+  }
+
+  getArea() {
+    return {
+      left: this.posx,
+      right: this.posx + this.width,
+      top: this.posy,
+      bottom: this.posy + this.height
+    }
+  }
 }
 
 export class DrawObjectGlyph extends DrawObject {
   constructor(objid) {
     super('glyph', objid)
     this.svgscale = 2000 // should be kept constant
+    this.isvgscale = 1 / this.svgscale
     this.svgpathversion = -1
     this.svgpathstring = null
   }
@@ -1594,6 +1670,28 @@ export class DrawObjectGlyph extends DrawObject {
       this.version++ // increment version
       this.clearRenderCache()
     }
+  }
+
+  doPointTest(testobj) {
+    if (!this.pathpoints || this.pathpoints.length === 0) return false
+    if (!testobj.pointTest(this.pathpoints[0])) return false
+    if (this.pathpoints.length === 1) return true
+    if (!testobj.pointTest(this.pathpoints[this.pathpoints.length - 1]))
+      return false
+
+    return this.intDoPointTest(testobj, 0, this.pathpoints.length, 8)
+  }
+
+  intDoPointTest(testobj, lower, upper, stack) {
+    const middle = lower + Math.floor((upper - lower) * 0.5)
+    if (middle === lower) return true // none left
+    if (!testobj.pointTest(this.pathpoints[middle])) return false
+
+    if (stack === 0) return true
+    const half1 = this.intDoPointTest(testobj, lower, middle, stack - 1)
+    const half2 = this.intDoPointTest(testobj, middle, upper, stack - 1)
+    if (!half1 || !half2) return false
+    return true
   }
 
   SVGPath() {
@@ -1774,6 +1872,17 @@ export class DrawObjectGlyph extends DrawObject {
     }
 
     return toret
+  }
+
+  getArea() {
+    const sx = this.startpoint.x
+    const sy = this.startpoint.y
+    return {
+      left: (this.area.left + sx) * this.isvgscale,
+      right: (this.area.right + sx) * this.isvgscale,
+      top: (this.area.top + sy) * this.isvgscale,
+      bottom: (this.area.bottom + sy) * this.isvgscale
+    }
   }
 }
 
