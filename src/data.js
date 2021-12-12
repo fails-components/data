@@ -1571,11 +1571,11 @@ export class DrawObjectGlyph extends DrawObject {
     this.isvgscale = 1 / this.svgscale
     this.svgpathversion = -1
     this.svgpathstring = null
+    this.stornum = null
   }
 
   storagenum() {
-    if (this.pathpoints && this.pathpoints.length > 0)
-      return Math.floor(this.pathpoints[0].y)
+    return this.stornum
   }
 
   startPath(x, y, type, color, width, pressure) {
@@ -1590,6 +1590,8 @@ export class DrawObjectGlyph extends DrawObject {
 
     const px = x * this.svgscale
     const py = y * this.svgscale
+
+    this.stornum = Math.floor(y)
 
     this.startpoint = { x: px, y: py }
     this.lastpoint = { x: px, y: py }
