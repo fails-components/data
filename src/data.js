@@ -1459,6 +1459,10 @@ export class DrawObject {
     this.selected = false
     this.clearRenderCache()
   }
+
+  storagenum() {
+    return null
+  }
 }
 
 export class DrawObjectPicture extends DrawObject {
@@ -1553,6 +1557,10 @@ export class DrawObjectPicture extends DrawObject {
       top: this.posy,
       bottom: this.posy + this.height
     }
+  }
+
+  storagenum() {
+    return Math.floor(this.posy)
   }
 }
 
