@@ -510,7 +510,7 @@ export class Container extends Sink {
     dataview.setFloat64(8, time) // 8..15
 
     dataview.setFloat32(16, x) // 16-19
-    dataview.setFloat32(16, y) // 20-23
+    dataview.setFloat32(20, y) // 20-23
 
     this.pushArrayToStorage(tempbuffer)
   }
@@ -738,6 +738,20 @@ export class MemContainer extends Container {
           dataview.getUint32(pos + 4),
           dataview.getUint8(pos + 3),
           null
+        )
+
+        break
+      case 8:
+        // now replay the data
+        if (length < 24) {
+          return -1 // damaged data
+        }
+        datasink.moveObject(
+          dataview.getFloat64(pos + 8),
+          dataview.getUint32(pos + 4),
+          dataview.getUint8(pos + 3),
+          dataview.getFloat32(pos + 16),
+          dataview.getFloat32(pos + 20)
         )
 
         break
@@ -1412,6 +1426,7 @@ export class DrawObject {
     this.objid = objid
     this.preview = false
     this.selected = false
+    this.preshift = null
   }
 
   getRenderCache(id) {
@@ -1429,6 +1444,28 @@ export class DrawObject {
 
   clearRenderCache() {
     this.rendercache = null
+  }
+
+  setPreshift(shift) {
+    if (shift && shift.x !== undefined && shift.y !== undefined) {
+      if (
+        !this.preshift ||
+        this.preshift.x !== shift.x ||
+        this.preshift.x !== shift.y
+      ) {
+        this.clearRenderCache()
+        this.preshift = { x: shift.x, y: shift.y }
+      }
+    } else {
+      if (this.preshift) {
+        this.clearRenderCache()
+        this.preshift = null
+      }
+    }
+  }
+
+  commitPreshift() {
+    // implement in derived class
   }
 
   setPreview(preview) {
@@ -1502,6 +1539,8 @@ export class DrawObjectPicture extends DrawObject {
   moveObject(x, y) {
     this.posx = x
     this.posy = y
+    this.preshift = null
+    this.clearRenderCache()
   }
 
   doPointTest(testobj) {
@@ -1559,6 +1598,40 @@ export class DrawObjectPicture extends DrawObject {
     }
   }
 
+  commitPreshift(target) {
+    if (!this.preshift) return
+    if (target) {
+      const newstorage = Math.floor(this.posy + this.preshift.y)
+      if (newstorage !== this.storagenum()) {
+        console.log('storage change picture')
+        // ok we have to delete the old obj and create a new one
+        target.sink.deleteObject(null, this.objid, null, this.storagenum())
+        const newobjid = target.newobjid(this.objid)
+        target.sink.addPicture(
+          null,
+          newobjid,
+          null,
+          this.posx + this.preshift.x,
+          this.posy + this.preshift.y,
+          this.width,
+          this.height,
+          this.uuid
+        )
+        target.deselect() // signals that the selection should be removed
+      } else {
+        // ok we just move
+        target.sink.moveObject(
+          null,
+          this.objid,
+          null,
+          this.posx + this.preshift.x,
+          this.posy + this.preshift.y
+        )
+      }
+    }
+    this.clearRenderCache()
+  }
+
   storagenum() {
     return Math.floor(this.posy)
   }
@@ -1599,7 +1672,7 @@ export class DrawObjectGlyph extends DrawObject {
     this.gtype = type
     /*  workpathstart: "",
             workpathend:"Z", */
-    this.pathpoints = [{ x: px, y: py, w: penw }]
+    this.pathpoints = [{ x: px, y: py, w: penw, press: this.pressure }]
     this.startradius = penw * 0.5
     this.penwidth = penwidth
     this.color = scolor
@@ -1647,7 +1720,7 @@ export class DrawObjectGlyph extends DrawObject {
     const ws = this.area
     const pw = wpenw
     this.lastpoint = { x: px, y: py }
-    this.pathpoints.push({ x: px, y: py, w: pw })
+    this.pathpoints.push({ x: px, y: py, w: pw, press: this.pressure })
     this.area = {
       left: Math.min(px - sx - 2 * pw, ws.left),
       right: Math.max(px - sx + 2 * pw, ws.right),
@@ -1673,12 +1746,9 @@ export class DrawObjectGlyph extends DrawObject {
         this.pathpoints[ind].x += rx
         this.pathpoints[ind].y += ry
       }
-      this.area.left += rx
-      this.area.right += rx
-      this.area.top += ry
-      this.area.bottom += ry
       this.version++ // increment version
       this.clearRenderCache()
+      this.preshift = null
     }
   }
 
@@ -1702,6 +1772,55 @@ export class DrawObjectGlyph extends DrawObject {
     const half2 = this.intDoPointTest(testobj, middle, upper, stack - 1)
     if (!half1 || !half2) return false
     return true
+  }
+
+  commitPreshift(target) {
+    if (target && this.pathpoints.length > 0) {
+      const newstorage = Math.floor(
+        this.preshift.y + this.pathpoints[0].y * this.isvgscale
+      )
+      const oldstorage = this.storagenum()
+      if (newstorage !== oldstorage) {
+        console.log('storage change glyph')
+        // ok we have to delete the old obj and create a new one
+        this.stornum = newstorage
+        const newobjid = target.newobjid(this.objid)
+        target.sink.startPath(
+          null,
+          newobjid,
+          null,
+          this.pathpoints[0].x * this.isvgscale + this.preshift.x,
+          this.pathpoints[0].y * this.isvgscale + this.preshift.y,
+          this.gtype,
+          Color(this.color).rgbNumber(),
+          this.penwidth * this.isvgscale,
+          this.pathpoints[0].press
+        )
+        for (let i = 1; i < this.pathpoints.length; i++) {
+          target.sink.addToPath(
+            null,
+            newobjid,
+            null,
+            this.pathpoints[i].x * this.isvgscale + this.preshift.x,
+            this.pathpoints[i].y * this.isvgscale + this.preshift.y,
+            this.pathpoints[i].press
+          )
+        }
+        target.sink.finishPath(null, newobjid, target.clientnum)
+        target.sink.deleteObject(null, this.objid, null, oldstorage)
+        target.deselect() // signals that the selection should be removed
+      } else {
+        // ok we just move
+        target.sink.moveObject(
+          null,
+          this.objid,
+          null,
+          this.pathpoints[0].x * this.isvgscale + this.preshift.x,
+          this.pathpoints[0].y * this.isvgscale + this.preshift.y
+        )
+      }
+    }
+    this.clearRenderCache()
   }
 
   SVGPath() {
