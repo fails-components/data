@@ -2101,7 +2101,7 @@ export class DrawObjectContainer extends Sink {
     if (!this.objects) return
     this.objects.forEach((el) => {
       if (el.objid === objnum) {
-        el.moveObject(x, y)
+        el.moveObject(x, this.yoffset ? y - this.yoffset : y)
       }
     })
   }
