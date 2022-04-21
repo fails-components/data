@@ -2133,7 +2133,7 @@ export class DrawArea3 extends DrawObjectContainer {
       this.slices[slice.pos] = slice.weight
     else this.slices[slice.pos] += slice.weight
     this.glomin = Math.min(this.glomin, slice.min)
-    this.glomax = Math.max(this.glomin, slice.min)
+    this.glomax = Math.max(this.glomax, slice.max)
   }
 
   calculateWeights() {
