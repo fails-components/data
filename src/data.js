@@ -1086,7 +1086,7 @@ export class Collection extends Sink {
 export class Dispatcher extends Sink {
   constructor() {
     super()
-    this.datasinklist = []
+    this.datasinklist = new Set()
     // this.curobjectnumber=0;
     this.curclientnum = 0
 
@@ -1119,13 +1119,12 @@ export class Dispatcher extends Sink {
   }
 
   addSink(sink) {
-    this.datasinklist.push(sink)
+    this.datasinklist.add(sink)
   }
 
   startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
     // console.log("FDD sP",this);
     if (this.blocked) return
-    let i
     // var object=this.fixObjNumber(objnum);
     const object = objnum
     // console.log("FDD startPath",time,objnum,curclient,x,y,w,color);
@@ -1136,19 +1135,9 @@ export class Dispatcher extends Sink {
     let client = curclient
     if (!client) client = this.curclientnum
     // console.log("FDD startPath2",timeset,object,client,x,y,w,color);
-    for (i = 0; i < this.datasinklist.length; i++) {
-      this.datasinklist[i].startPath(
-        timeset,
-        object,
-        client,
-        x,
-        y,
-        type,
-        color,
-        w,
-        pressure
-      )
-    }
+    this.datasinklist.forEach((sink) =>
+      sink.startPath(timeset, object, client, x, y, type, color, w, pressure)
+    )
   }
 
   addToPath(time, objnum, curclient, x, y, pressure) {
@@ -1159,10 +1148,9 @@ export class Dispatcher extends Sink {
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
-    let i
-    for (i = 0; i < this.datasinklist.length; i++) {
-      this.datasinklist[i].addToPath(timeset, objnum, client, x, y, pressure)
-    }
+    this.datasinklist.forEach((sink) =>
+      sink.addToPath(timeset, objnum, client, x, y, pressure)
+    )
   }
 
   finishPath(time, objnum, curclient) {
@@ -1173,26 +1161,23 @@ export class Dispatcher extends Sink {
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
-    let i
-    for (i = 0; i < this.datasinklist.length; i++) {
-      this.datasinklist[i].finishPath(timeset, objnum, client)
-    }
+    this.datasinklist.forEach((sink) =>
+      sink.finishPath(timeset, objnum, client)
+    )
   }
 
   scrollBoard(time, clientnum, x, y) {
     this.setTimeandScrollPos(time, x, y)
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
-    let i
-    for (i = 0; i < this.datasinklist.length; i++) {
-      this.datasinklist[i].scrollBoard(timeset, clientnum, x, y)
-    }
+    this.datasinklist.forEach((sink) =>
+      sink.scrollBoard(timeset, clientnum, x, y)
+    )
   }
 
   addPicture(time, objnum, curclient, x, y, width, height, uuid) {
     // console.log("addPicture in failsdata dispatcher before blocked");
     if (this.blocked) return
-    let i
     // var object=this.fixObjNumber(objnum);
     const object = objnum
     // console.log("FDD startPath",time,objnum,curclient,x,y,w,color);
@@ -1204,18 +1189,9 @@ export class Dispatcher extends Sink {
     if (!client) client = this.curclientnum
     // console.log("addPicture in failsdata dispatcher");
 
-    for (i = 0; i < this.datasinklist.length; i++) {
-      this.datasinklist[i].addPicture(
-        timeset,
-        object,
-        client,
-        x,
-        y,
-        width,
-        height,
-        uuid
-      )
-    }
+    this.datasinklist.forEach((sink) =>
+      sink.addPicture(timeset, object, client, x, y, width, height, uuid)
+    )
   }
 
   deleteObject(time, objnum, curclient, storagenum) {
@@ -1225,10 +1201,9 @@ export class Dispatcher extends Sink {
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
-    let i
-    for (i = 0; i < this.datasinklist.length; i++) {
-      this.datasinklist[i].deleteObject(timeset, objnum, client, storagenum)
-    }
+    this.datasinklist.forEach((sink) =>
+      sink.deleteObject(timeset, objnum, client, storagenum)
+    )
   }
 
   moveObject(time, objnum, curclient, x, y) {
@@ -1238,10 +1213,9 @@ export class Dispatcher extends Sink {
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
 
-    let i
-    for (i = 0; i < this.datasinklist.length; i++) {
-      this.datasinklist[i].moveObject(timeset, objnum, client, x, y)
-    }
+    this.datasinklist.forEach((sink) =>
+      sink.moveObject(timeset, objnum, client, x, y)
+    )
   }
 
   setTimeandScrollPos(time, scrollx, scrolly) {
