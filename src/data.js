@@ -846,7 +846,7 @@ export class Collection extends Sink {
     if (!this.contdirty.some((el) => !!el)) {
       if (this.dirty) {
         this.dirty = false
-        this.ondirty(false)
+        if (this.ondirty) this.ondirty(false)
       }
     }
   }
@@ -1083,12 +1083,12 @@ export class Collection extends Sink {
       if (this.contdirty.some((el) => !!el)) {
         if (!this.dirty) {
           this.dirty = true
-          this.ondirty(true)
+          if (this.ondirty) this.ondirty(true)
         }
       } else {
         if (this.dirty) {
           this.dirty = false
-          this.ondirty(false)
+          if (this.ondirty) this.ondirty(false)
         }
       }
     }
