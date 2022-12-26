@@ -525,6 +525,14 @@ export class MemContainer extends Container {
     this.number = num
   }
 
+  getContainerData() {
+    const clonestorage = new ArrayBuffer(this.storageSize)
+    new Uint8Array(clonestorage).set(
+      new Uint8Array(this.storage, 0, this.storageSize)
+    ) // copy data
+    return clonestorage
+  }
+
   pushArrayToStorage(array) {
     while (array.byteLength + this.storageSize > this.storageAllocSize) {
       // realloc data
