@@ -829,10 +829,16 @@ export class Collection extends Sink {
     this.lastcontainer = {}
     this.containers = []
     this.contdirty = []
+    this.dirty = false
 
     this.containertype = containertype
     this.containerconfig = containerconfig
     this.commandcontainer = this.containertype('command', containerconfig)
+  }
+
+  setOnDirty(cb) {
+    this.ondirty = cb
+    this.ondirty(this.dirty)
   }
 
   checkContainerExistsAndDirty(storagenum) {
@@ -842,7 +848,13 @@ export class Collection extends Sink {
         storagenum,
         this.containerconfig
       )
+    }
+    if (!this.contdirty[storagenum]) {
       this.contdirty[storagenum] = true
+      if (!this.dirty) {
+        this.dirty = true
+        if (this.ondirty) this.ondirty()
+      }
     }
   }
 
@@ -1041,11 +1053,12 @@ export class Collection extends Sink {
   clearContainers() {
     this.containers = []
     this.contdirty = []
+    this.dirty = false
+    if (this.ondirty) this.ondirty(false)
     this.lasttime = 0
 
     this.lastcontainer = 0
     this.commandcontainer = this.containertype('command', this.containerconfig)
-    console.log('clear Containers')
   }
 
   replaceStoredData(i, data) {
@@ -1057,6 +1070,12 @@ export class Collection extends Sink {
       }
       this.contdirty[i] = false
       this.containers[i].replaceStoredData(data)
+      if (this.contdirty.some((el) => !!el)) {
+        if (!this.dirty) {
+          this.dirty = true
+          this.ondirty(true)
+        }
+      }
     }
   }
 }
