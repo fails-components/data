@@ -1067,7 +1067,7 @@ export class Collection extends Sink {
     if (this.ondirty) this.ondirty(false)
     this.lasttime = 0
 
-    this.lastcontainer = 0
+    this.lastcontainer = {}
     this.commandcontainer = this.containertype('command', this.containerconfig)
   }
 
