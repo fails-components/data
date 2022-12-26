@@ -841,6 +841,16 @@ export class Collection extends Sink {
     this.ondirty(this.dirty)
   }
 
+  unDirty(cont) {
+    this.contdirty[cont] = false
+    if (!this.contdirty.some((el) => !!el)) {
+      if (this.dirty) {
+        this.dirty = false
+        this.ondirty(false)
+      }
+    }
+  }
+
   checkContainerExistsAndDirty(storagenum) {
     if (!(storagenum in this.containers)) {
       // TODO for the network case sync with server
@@ -1074,6 +1084,11 @@ export class Collection extends Sink {
         if (!this.dirty) {
           this.dirty = true
           this.ondirty(true)
+        }
+      } else {
+        if (this.dirty) {
+          this.dirty = false
+          this.ondirty(false)
         }
       }
     }
