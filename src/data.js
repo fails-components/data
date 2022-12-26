@@ -828,22 +828,28 @@ export class Collection extends Sink {
 
     this.lastcontainer = {}
     this.containers = []
+    this.contdirty = []
 
     this.containertype = containertype
     this.containerconfig = containerconfig
     this.commandcontainer = this.containertype('command', containerconfig)
   }
 
-  startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
-    const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
-    // console.log("strnm SP",storagenum);
+  checkContainerExistsAndDirty(storagenum) {
     if (!(storagenum in this.containers)) {
       // TODO for the network case sync with server
       this.containers[storagenum] = this.containertype(
         storagenum,
         this.containerconfig
       )
+      this.contdirty[storagenum] = true
     }
+  }
+
+  startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
+    const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
+    // console.log("strnm SP",storagenum);
+    this.checkContainerExistsAndDirty(storagenum)
     this.lastcontainer[objnum] = storagenum
 
     this.containers[storagenum].startPath(
@@ -865,13 +871,7 @@ export class Collection extends Sink {
     }
     const storagenum = this.lastcontainer[objnum] // in Normalized coordinates we have rectangular areas
     // console.log("strnm atp",storagenum);
-    if (!(storagenum in this.containers)) {
-      // TODO for the network case sync with server
-      this.containers[storagenum] = this.containertype(
-        storagenum,
-        this.containerconfig
-      )
-    }
+    this.checkContainerExistsAndDirty(storagenum)
 
     this.containers[storagenum].addToPath(
       time,
@@ -890,13 +890,7 @@ export class Collection extends Sink {
     }
     const storagenum = this.lastcontainer[objnum] // in Normalized coordinates we have rectangular areas
     // console.log("strnm fp",storagenum);
-    if (!(storagenum in this.containers)) {
-      // TODO for the network case sync with server
-      this.containers[storagenum] = this.containertype(
-        storagenum,
-        this.containerconfig
-      )
-    }
+    this.checkContainerExistsAndDirty(storagenum)
     delete this.lastcontainer[objnum]
 
     this.containers[storagenum].finishPath(time, objnum, curclient)
@@ -904,13 +898,7 @@ export class Collection extends Sink {
 
   addPicture(time, objnum, curclient, x, y, width, height, uuid) {
     const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
-    if (!(storagenum in this.containers)) {
-      // TODO for the network case sync with server
-      this.containers[storagenum] = this.containertype(
-        storagenum,
-        this.containerconfig
-      )
-    }
+    this.checkContainerExistsAndDirty(storagenum)
     // console.log("addPicture in failsdata collection",storagenum);
 
     this.containers[storagenum].addPicture(
@@ -927,13 +915,7 @@ export class Collection extends Sink {
 
   deleteObject(time, objnum, curclient, storagenum) {
     if (!Number.isInteger(storagenum)) return
-    if (!(storagenum in this.containers)) {
-      // TODO for the network case sync with server
-      this.containers[storagenum] = this.containertype(
-        storagenum,
-        this.containerconfig
-      )
-    }
+    this.checkContainerExistsAndDirty(storagenum)
     this.containers[storagenum].deleteObject(
       time,
       objnum,
@@ -944,13 +926,7 @@ export class Collection extends Sink {
 
   moveObject(time, objnum, curclient, x, y) {
     const storagenum = Math.floor(y) // in Normalized coordinates we have rectangular areas
-    if (!(storagenum in this.containers)) {
-      // TODO for the network case sync with server
-      this.containers[storagenum] = this.containertype(
-        storagenum,
-        this.containerconfig
-      )
-    }
+    this.checkContainerExistsAndDirty(storagenum)
     this.containers[storagenum].moveObject(time, objnum, curclient, x, y)
   }
 
@@ -1064,6 +1040,7 @@ export class Collection extends Sink {
 
   clearContainers() {
     this.containers = []
+    this.contdirty = []
     this.lasttime = 0
 
     this.lastcontainer = 0
@@ -1078,6 +1055,7 @@ export class Collection extends Sink {
       if (!(i in this.containers)) {
         this.containers[i] = this.containertype(i, this.containerconfig)
       }
+      this.contdirty[i] = false
       this.containers[i].replaceStoredData(data)
     }
   }
