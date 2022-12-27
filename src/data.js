@@ -1142,6 +1142,10 @@ export class Dispatcher extends Sink {
     this.datasinklist.add(sink)
   }
 
+  removeSink(sink) {
+    this.datasinklist.delete(sink)
+  }
+
   startPath(time, objnum, curclient, x, y, type, color, w, pressure) {
     // console.log("FDD sP",this);
     if (this.blocked) return
