@@ -19,40 +19,8 @@
 
 import Color from 'color'
 
-let now
-
-// adds support for high performance timers + fallbacks taken from http://gent.ilcore.com/2012/06/better-timer-for-javascript.html
-if (typeof window !== 'undefined') {
-  window.performance = window.performance || {}
-  console.log('performance now')
-
-  // eslint-disable-next-line no-undef
-  performance.now = (function () {
-    // eslint-disable-next-line no-undef
-    return (
-      // eslint-disable-next-line no-undef
-      performance.now ||
-      // eslint-disable-next-line no-undef
-      performance.mozNow ||
-      // eslint-disable-next-line no-undef
-      performance.msNow ||
-      // eslint-disable-next-line no-undef
-      performance.oNow ||
-      // eslint-disable-next-line no-undef
-      performance.webkitNow ||
-      function () {
-        return new Date().getTime()
-      }
-    )
-  })()
-  now = function () {
-    // eslint-disable-next-line no-undef
-    return performance.now()
-  }
-} else {
-  // we are running under node
-  now = require('performance-now')
-}
+// eslint-disable-next-line no-undef
+const now = performance.now
 
 export class Sink {
   startPath(time, objnum, curclient, x, y, type, color, width, pressure) {

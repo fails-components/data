@@ -10,6 +10,7 @@
   },
   "main": "src/data.js",
   "source": "src/data.js",
+  "type": "module",
   "engines": {
     "node": ">=16"
   },
