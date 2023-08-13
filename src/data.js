@@ -1699,7 +1699,7 @@ export class DrawObjectForm extends DrawObject {
     if ((this.fColor & 0xff000000) >>> 24 !== 0) opague = true
 
     if (!opague) {
-      for (let phi = 0; phi < 2 * Math.Pi; phi += (2 * Math.Pi) / 20) {
+      for (let phi = 0; phi < 2 * Math.PI; phi += (2 * Math.PI) / 20) {
         if (
           !testobj.pointTest({
             x: (px + radiusx * Math.sin(phi)) * this.svgscale,
@@ -1848,7 +1848,6 @@ export class DrawObjectForm extends DrawObject {
     if (target) {
       const newstorage = Math.floor(this.posy + this.preshift.y)
       if (newstorage !== this.storagenum()) {
-        console.log('storage change form')
         // ok we have to delete the old obj and create a new one
         target.sink.deleteObject(null, this.objid, null, this.storagenum())
         const newobjid = target.newobjid(this.objid)
