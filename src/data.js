@@ -1590,7 +1590,7 @@ export class DrawObjectForm extends DrawObject {
     const sliceposend = Math.round((this.posy + this.height) / numslicesheight)
     let sliceweight
     let opague = false
-    if (Color(this.fColor).alpha() > 0) opague = true
+    if ((this.fColor & 0xff000000) >>> 24 !== 0) opague = true
     // const posx = Math.min(this.posx, this.posx + this.width)
     const posy = Math.min(this.posy, this.posy + this.height)
     const width = Math.abs(this.width)
@@ -1695,7 +1695,7 @@ export class DrawObjectForm extends DrawObject {
     const py = this.posy + this.height * 0.5
 
     let opague = false
-    if (Color(this.fColor).alpha() > 0) opague = true
+    if ((this.fColor & 0xff000000) >>> 24 !== 0) opague = true
 
     if (!opague) {
       for (let phi = 0; phi < 2 * Math.Pi; phi += (2 * Math.Pi) / 20) {
@@ -1745,7 +1745,7 @@ export class DrawObjectForm extends DrawObject {
 
   doPointTestRect(testobj) {
     let opague = false
-    if (Color(this.fColor).alpha() > 0) opague = true
+    if ((this.fColor & 0xff000000) >>> 24 !== 0) opague = true
     // four corners
     if (
       !testobj.pointTest({
