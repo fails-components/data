@@ -1578,7 +1578,7 @@ export class DrawObjectForm extends DrawObject {
     this.posy = y
     this.width = width
     this.height = height
-    this.type = type
+    this.formtype = type
     this.bColor = bColor
     this.fColor = fColor
     this.lw = lw
@@ -1596,7 +1596,7 @@ export class DrawObjectForm extends DrawObject {
     const posy = Math.min(this.posy, this.posy + this.height)
     const width = Math.abs(this.width)
     const height = Math.abs(this.height)
-    switch (this.type) {
+    switch (this.formtype) {
       case 2: // rectangle
         if (opague) {
           sliceweight = () =>
@@ -1677,7 +1677,7 @@ export class DrawObjectForm extends DrawObject {
   }
 
   doPointTest(testobj) {
-    switch (this.type) {
+    switch (this.formtype) {
       case 2: // line
         return this.doPointTestRect(testobj)
       case 3: // Circle
@@ -1860,7 +1860,7 @@ export class DrawObjectForm extends DrawObject {
           this.posy + this.preshift.y,
           this.width,
           this.height,
-          this.type,
+          this.formtype,
           this.bColor,
           this.fColor,
           this.lw
