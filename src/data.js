@@ -1458,8 +1458,8 @@ export class DrawObjectPicture extends DrawObject {
       toret.push({
         weight: sliceweight,
         pos: slicepos,
-        min: this.posy,
-        max: this.posy + this.height
+        min: Math.min(this.posy, this.posy + this.height),
+        max: Math.max(this.posy, this.posy + this.height)
       })
     }
     return toret
@@ -1520,10 +1520,10 @@ export class DrawObjectPicture extends DrawObject {
 
   getArea() {
     return {
-      left: this.posx,
-      right: this.posx + this.width,
-      top: this.posy,
-      bottom: this.posy + this.height
+      left: Math.min(this.posx, this.posx + this.width),
+      right: Math.max(this.posx, this.posx + this.width),
+      top: Math.min(this.posy, this.posy + this.height),
+      bottom: Math.max(this.posy, this.posy + this.height)
     }
   }
 
@@ -1591,22 +1591,26 @@ export class DrawObjectForm extends DrawObject {
     let sliceweight
     let opague = false
     if (Color(this.fColor).alpha() > 0) opague = true
+    // const posx = Math.min(this.posx, this.posx + this.width)
+    const posy = Math.min(this.posy, this.posy + this.height)
+    const width = Math.abs(this.width)
+    const height = Math.abs(this.height)
     switch (this.type) {
       case 2: // rectangle
         if (opague) {
           sliceweight = () =>
-            (this.width * numslicesheight) / this.svgscale / this.svgscale
+            (width * numslicesheight) / this.svgscale / this.svgscale
         } else {
           sliceweight = (slicepos) => {
             let weigth =
               (this.lw * numslicesheight) / this.svgscale / this.svgscale
             if (
-              (slicepos * numslicesheight < this.posy &&
-                this.posy <= (slicepos + 1) * numslicesheight) ||
-              (slicepos * numslicesheight < this.posy + this.height &&
-                this.posy + this.height <= (slicepos + 1) * numslicesheight)
+              (slicepos * numslicesheight < posy &&
+                posy <= (slicepos + 1) * numslicesheight) ||
+              (slicepos * numslicesheight < posy + height &&
+                posy + height <= (slicepos + 1) * numslicesheight)
             )
-              weigth += (this.width * this.lw) / this.svgscale / this.svgscale
+              weigth += (width * this.lw) / this.svgscale / this.svgscale
             return weigth
           }
         }
@@ -1616,12 +1620,10 @@ export class DrawObjectForm extends DrawObject {
         if (opague) {
           sliceweight = (slicepos) => {
             const yunitcircle =
-              ((slicepos + 0.5) * numslicesheight - this.posy) /
-                (this.height * 0.5) -
-              1
+              ((slicepos + 0.5) * numslicesheight - posy) / (height * 0.5) - 1
             const xunitcircle = Math.sqrt(1 - yunitcircle * yunitcircle)
             return (
-              (xunitcircle * 2 * this.width * numslicesheight) /
+              (xunitcircle * 2 * width * numslicesheight) /
               this.svgscale /
               this.svgscale
             )
@@ -1629,9 +1631,7 @@ export class DrawObjectForm extends DrawObject {
         } else {
           sliceweight = (slicepos) => {
             const yunitcircle =
-              ((slicepos + 0.5) * numslicesheight - this.posy) /
-                (this.height * 0.5) -
-              1
+              ((slicepos + 0.5) * numslicesheight - posy) / (height * 0.5) - 1
             const liney = numslicesheight
             const linex = Math.abs(yunitcircle) * this.width
 
@@ -1648,10 +1648,9 @@ export class DrawObjectForm extends DrawObject {
       default:
         // line
         if (this.height === 0)
-          sliceweight = () =>
-            (this.width * this.lw) / this.svgscale / this.svgscale
+          sliceweight = () => (width * this.lw) / this.svgscale / this.svgscale
         else {
-          const m = this.width / this.height
+          const m = width / height
           sliceweight = () =>
             (numslicesheight * m) / this.svgscale / this.svgscale
         }
@@ -1662,8 +1661,8 @@ export class DrawObjectForm extends DrawObject {
       toret.push({
         weight: sliceweight(slicepos),
         pos: slicepos,
-        min: this.posy,
-        max: this.posy + this.height
+        min: posy,
+        max: posy + height
       })
     }
     return toret
@@ -1690,10 +1689,10 @@ export class DrawObjectForm extends DrawObject {
   }
 
   doPointTestEllipseCircle(testobj) {
-    const radiusx = this.width * 0.5
-    const radiusy = this.height * 0.5
-    const px = this.posx + radiusx
-    const py = this.posy + radiusy
+    const radiusx = Math.abs(this.width) * 0.5
+    const radiusy = Math.abs(this.height) * 0.5
+    const px = this.posx + this.width * 0.5
+    const py = this.posy + this.height * 0.5
 
     let opague = false
     if (Color(this.fColor).alpha() > 0) opague = true
@@ -1836,10 +1835,10 @@ export class DrawObjectForm extends DrawObject {
 
   getArea() {
     return {
-      left: this.posx,
-      right: this.posx + this.width,
-      top: this.posy,
-      bottom: this.posy + this.height
+      left: Math.min(this.posx, this.posx + this.width),
+      right: Math.max(this.posx, this.posx + this.width),
+      top: Math.min(this.posy, this.posy + this.height),
+      bottom: Math.max(this.posy, this.posy + this.height)
     }
   }
 
