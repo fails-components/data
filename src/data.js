@@ -1224,6 +1224,7 @@ export class NetworkSink extends Sink {
     outobj.bColor = bColor
     outobj.fColor = fColor
     outobj.lw = lw
+    this.sendfunc(outobj)
   }
 
   scrollBoard(time, clientnum, x, y) {
