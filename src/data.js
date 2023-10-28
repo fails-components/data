@@ -1438,13 +1438,14 @@ export class DrawObjectPicture extends DrawObject {
     this.svgscale = 2000 // should be kept constant
   }
 
-  addPicture(x, y, width, height, uuid, url, mimetype) {
+  addPicture(x, y, width, height, uuid, url, mimetype, urlthumb) {
     this.posx = x
     this.posy = y
     this.width = width
     this.height = height
     this.uuid = uuid
     this.url = url
+    this.urlthumb = urlthumb
     this.mimetype = mimetype
     this.clearRenderCache()
   }
@@ -2296,7 +2297,8 @@ export class DrawObjectContainer extends Sink {
       height,
       uuid,
       pictinfo ? pictinfo.url : null,
-      pictinfo ? pictinfo.mimetype : null
+      pictinfo ? pictinfo.mimetype : null,
+      pictinfo ? pictinfo.urlthumb : null
     )
 
     this.objects.push(addpict)
