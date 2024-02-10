@@ -1583,10 +1583,12 @@ export class DrawObjectPicture extends DrawObject {
       this.width,
       this.height,
       this.uuid,
+      this.url,
       this.mimetype,
       this.urlthumb
     )
     this.deselect()
+    newobj.select()
     return newobj
   }
 
@@ -1927,6 +1929,7 @@ export class DrawObjectForm extends DrawObject {
       this.lw
     )
     this.deselect()
+    newobj.select()
     return newobj
   }
 
