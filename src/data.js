@@ -2170,6 +2170,7 @@ export class DrawObjectGlyph extends DrawObject {
       )
     }
     newobj.finishPath()
+    newobj.select()
     this.deselect()
     return newobj
   }
