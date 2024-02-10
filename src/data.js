@@ -2143,11 +2143,9 @@ export class DrawObjectGlyph extends DrawObject {
       this.pathpoints[0].x * this.isvgscale + (this.preshift?.x ?? 0) + shift.x,
       this.pathpoints[0].y * this.isvgscale + (this.preshift?.y ?? 0) + shift.y,
       this.gtype,
-      Color(
-        this.color.rgbNumber(),
-        this.penwidth * this.isvgscale,
-        this.pathpoints[0].press
-      )
+      Color(this.color).rgbNumber(),
+      this.penwidth * this.isvgscale,
+      this.pathpoints[0].press
     )
     for (let i = 1; i < this.pathpoints.length; i++) {
       newobj.addToPath(
