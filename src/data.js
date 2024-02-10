@@ -1536,9 +1536,9 @@ export class DrawObjectPicture extends DrawObject {
   }
 
   commitPreshift(target) {
-    if (!this.preshift) return
+    if (!this.preshift && !this.uncommitted) return
     if (target) {
-      const newstorage = Math.floor(this.posy + this.preshift.y)
+      const newstorage = Math.floor(this.posy + (this.preshift.y ?? 0))
       if (newstorage !== this.storagenum() || this.uncommitted) {
         // ok we have to delete the old obj and create a new one
         let newobjid
@@ -1552,8 +1552,8 @@ export class DrawObjectPicture extends DrawObject {
           null,
           newobjid,
           null,
-          this.posx + this.preshift.x,
-          this.posy + this.preshift.y,
+          this.posx + (this.preshift.x ?? 0),
+          this.posy + (this.preshift.y ?? 0),
           this.width,
           this.height,
           this.uuid
@@ -1566,8 +1566,8 @@ export class DrawObjectPicture extends DrawObject {
           null,
           this.objid,
           null,
-          this.posx + this.preshift.x,
-          this.posy + this.preshift.y
+          this.posx + (this.preshift.x ?? 0),
+          this.posy + (this.preshift.y ?? 0)
         )
       }
     }
@@ -1578,8 +1578,8 @@ export class DrawObjectPicture extends DrawObject {
     const newobj = new DrawObjectPicture(target.newobjid(this.objid))
     newobj.uncommitted = true
     newobj.addPicture(
-      this.posx + this.preshift.x + shift.x,
-      this.posy + this.preshift.y + shift.y,
+      this.posx + (this.preshift.x ?? 0) + shift.x,
+      this.posy + (this.preshift.y ?? 0) + shift.y,
       this.width,
       this.height,
       this.uuid,
@@ -1872,9 +1872,9 @@ export class DrawObjectForm extends DrawObject {
   }
 
   commitPreshift(target) {
-    if (!this.preshift) return
+    if (!this.preshift && !this.uncommitted) return
     if (target) {
-      const newstorage = Math.floor(this.posy + this.preshift.y)
+      const newstorage = Math.floor(this.posy + (this.preshift.y ?? 0))
       if (newstorage !== this.storagenum() || this.uncommitted) {
         // ok we have to delete the old obj and create a new one
         let newobjid
@@ -1888,8 +1888,8 @@ export class DrawObjectForm extends DrawObject {
           null,
           newobjid,
           null,
-          this.posx + this.preshift.x,
-          this.posy + this.preshift.y,
+          this.posx + (this.preshift.x ?? 0),
+          this.posy + (this.preshift.y ?? 0),
           this.width,
           this.height,
           this.formtype,
@@ -1905,8 +1905,8 @@ export class DrawObjectForm extends DrawObject {
           null,
           this.objid,
           null,
-          this.posx + this.preshift.x,
-          this.posy + this.preshift.y
+          this.posx + (this.preshift.x ?? 0),
+          this.posy + (this.preshift.y ?? 0)
         )
       }
     }
@@ -1917,8 +1917,8 @@ export class DrawObjectForm extends DrawObject {
     const newobj = new DrawObjectForm(target.newobjid(this.objid))
     newobj.uncommitted = true
     newobj.addForm(
-      this.posx + this.preshift.x + shift.x,
-      this.posy + this.preshift.y + shift.y,
+      this.posx + (this.preshift.x ?? 0) + shift.x,
+      this.posy + (this.preshift.y ?? 0) + shift.y,
       this.width,
       this.height,
       this.formtype,
@@ -2081,9 +2081,10 @@ export class DrawObjectGlyph extends DrawObject {
   }
 
   commitPreshift(target) {
+    if (!this.preshift && !this.uncommitted) return
     if (target && this.pathpoints.length > 0) {
       const newstorage = Math.floor(
-        this.preshift.y + this.pathpoints[0].y * this.isvgscale
+        (this.preshift.y ?? 0) + this.pathpoints[0].y * this.isvgscale
       )
       const oldstorage = this.storagenum()
       if (newstorage !== oldstorage || this.uncommitted) {
@@ -2099,8 +2100,8 @@ export class DrawObjectGlyph extends DrawObject {
           null,
           newobjid,
           null,
-          this.pathpoints[0].x * this.isvgscale + this.preshift.x,
-          this.pathpoints[0].y * this.isvgscale + this.preshift.y,
+          this.pathpoints[0].x * this.isvgscale + (this.preshift.x ?? 0),
+          this.pathpoints[0].y * this.isvgscale + (this.preshift.y ?? 0),
           this.gtype,
           Color(this.color).rgbNumber(),
           this.penwidth * this.isvgscale,
@@ -2111,8 +2112,8 @@ export class DrawObjectGlyph extends DrawObject {
             null,
             newobjid,
             null,
-            this.pathpoints[i].x * this.isvgscale + this.preshift.x,
-            this.pathpoints[i].y * this.isvgscale + this.preshift.y,
+            this.pathpoints[i].x * this.isvgscale + (this.preshift.x ?? 0),
+            this.pathpoints[i].y * this.isvgscale + (this.preshift.y ?? 0),
             this.pathpoints[i].press
           )
         }
@@ -2127,8 +2128,8 @@ export class DrawObjectGlyph extends DrawObject {
           null,
           this.objid,
           null,
-          this.pathpoints[0].x * this.isvgscale + this.preshift.x,
-          this.pathpoints[0].y * this.isvgscale + this.preshift.y
+          this.pathpoints[0].x * this.isvgscale + (this.preshift.x ?? 0),
+          this.pathpoints[0].y * this.isvgscale + (this.preshift.y ?? 0)
         )
       }
     }
@@ -2139,8 +2140,8 @@ export class DrawObjectGlyph extends DrawObject {
     const newobj = new DrawObjectGlyph(target.newobjid(this.objid))
     newobj.uncommitted = true
     newobj.startPath(
-      this.pathpoints[0].x * this.isvgscale + this.preshift.x + shift.x,
-      this.pathpoints[0].y * this.isvgscale + this.preshift.y + shift.y,
+      this.pathpoints[0].x * this.isvgscale + (this.preshift.x ?? 0) + shift.x,
+      this.pathpoints[0].y * this.isvgscale + (this.preshift.y ?? 0) + shift.y,
       this.gtype,
       Color(
         this.color.rgbNumber(),
@@ -2150,8 +2151,12 @@ export class DrawObjectGlyph extends DrawObject {
     )
     for (let i = 1; i < this.pathpoints.length; i++) {
       newobj.addToPath(
-        this.pathpoints[i].x * this.isvgscale + this.preshift.x + shift.x,
-        this.pathpoints[i].y * this.isvgscale + this.preshift.y + shift.y,
+        this.pathpoints[i].x * this.isvgscale +
+          (this.preshift.x ?? 0) +
+          shift.x,
+        this.pathpoints[i].y * this.isvgscale +
+          (this.preshift.y ?? 0) +
+          shift.y,
         this.pathpoints[i].press
       )
     }
