@@ -1357,6 +1357,7 @@ export class DrawObject {
     this.preview = false
     this.selected = false
     this.preshift = null
+    this.uncommitted = false // used if the object is copied
   }
 
   getRenderCache(id) {
@@ -1394,8 +1395,13 @@ export class DrawObject {
     }
   }
 
-  commitPreshift() {
+  commitPreshift(target) {
     // implement in derived class
+  }
+
+  copyAndDeselect(target, shift) {
+    // implement in derived class
+    // return the copied object
   }
 
   setPreview(preview) {
@@ -1533,11 +1539,15 @@ export class DrawObjectPicture extends DrawObject {
     if (!this.preshift) return
     if (target) {
       const newstorage = Math.floor(this.posy + this.preshift.y)
-      if (newstorage !== this.storagenum()) {
-        console.log('storage change picture')
+      if (newstorage !== this.storagenum() || this.uncommitted) {
         // ok we have to delete the old obj and create a new one
-        target.sink.deleteObject(null, this.objid, null, this.storagenum())
-        const newobjid = target.newobjid(this.objid)
+        let newobjid
+        if (!this.uncommitted) {
+          target.sink.deleteObject(null, this.objid, null, this.storagenum())
+          newobjid = target.newobjid(this.objid)
+        } else {
+          newobjid = this.objid
+        }
         target.sink.addPicture(
           null,
           newobjid,
@@ -1549,6 +1559,7 @@ export class DrawObjectPicture extends DrawObject {
           this.uuid
         )
         target.deselect() // signals that the selection should be removed
+        this.uncommitted = false
       } else {
         // ok we just move
         target.sink.moveObject(
@@ -1561,6 +1572,22 @@ export class DrawObjectPicture extends DrawObject {
       }
     }
     this.clearRenderCache()
+  }
+
+  copyAndDeselect(target, shift) {
+    const newobj = new DrawObjectPicture(target.newobjid(this.objid))
+    newobj.uncommitted = true
+    newobj.addPicture(
+      this.posx + this.preshift.x + shift.x,
+      this.posy + this.preshift.y + shift.y,
+      this.width,
+      this.height,
+      this.uuid,
+      this.mimetype,
+      this.urlthumb
+    )
+    this.deselect()
+    return newobj
   }
 
   storagenum() {
@@ -1848,10 +1875,15 @@ export class DrawObjectForm extends DrawObject {
     if (!this.preshift) return
     if (target) {
       const newstorage = Math.floor(this.posy + this.preshift.y)
-      if (newstorage !== this.storagenum()) {
+      if (newstorage !== this.storagenum() || this.uncommitted) {
         // ok we have to delete the old obj and create a new one
-        target.sink.deleteObject(null, this.objid, null, this.storagenum())
-        const newobjid = target.newobjid(this.objid)
+        let newobjid
+        if (!this.uncommitted) {
+          target.sink.deleteObject(null, this.objid, null, this.storagenum())
+          newobjid = target.newobjid(this.objid)
+        } else {
+          newobjid = this.objid
+        }
         target.sink.addForm(
           null,
           newobjid,
@@ -1866,6 +1898,7 @@ export class DrawObjectForm extends DrawObject {
           this.lw
         )
         target.deselect() // signals that the selection should be removed
+        this.uncommitted = false
       } else {
         // ok we just move
         target.sink.moveObject(
@@ -1878,6 +1911,23 @@ export class DrawObjectForm extends DrawObject {
       }
     }
     this.clearRenderCache()
+  }
+
+  copyAndDeselect(target, shift) {
+    const newobj = new DrawObjectForm(target.newobjid(this.objid))
+    newobj.uncommitted = true
+    newobj.addForm(
+      this.posx + this.preshift.x + shift.x,
+      this.posy + this.preshift.y + shift.y,
+      this.width,
+      this.height,
+      this.formtype,
+      this.bColor,
+      this.fColor,
+      this.lw
+    )
+    this.deselect()
+    return newobj
   }
 
   storagenum() {
@@ -2036,11 +2086,15 @@ export class DrawObjectGlyph extends DrawObject {
         this.preshift.y + this.pathpoints[0].y * this.isvgscale
       )
       const oldstorage = this.storagenum()
-      if (newstorage !== oldstorage) {
-        console.log('storage change glyph')
+      if (newstorage !== oldstorage || this.uncommitted) {
         // ok we have to delete the old obj and create a new one
         this.stornum = newstorage
-        const newobjid = target.newobjid(this.objid)
+        let newobjid
+        if (!this.uncommitted) {
+          newobjid = target.newobjid(this.objid)
+        } else {
+          newobjid = this.objid
+        }
         target.sink.startPath(
           null,
           newobjid,
@@ -2063,8 +2117,10 @@ export class DrawObjectGlyph extends DrawObject {
           )
         }
         target.sink.finishPath(null, newobjid, target.clientnum)
-        target.sink.deleteObject(null, this.objid, null, oldstorage)
+        if (!this.uncommitted)
+          target.sink.deleteObject(null, this.objid, null, oldstorage)
         target.deselect() // signals that the selection should be removed
+        this.uncommitted = false
       } else {
         // ok we just move
         target.sink.moveObject(
@@ -2077,6 +2133,31 @@ export class DrawObjectGlyph extends DrawObject {
       }
     }
     this.clearRenderCache()
+  }
+
+  copyAndDeselect(target, shift) {
+    const newobj = new DrawObjectGlyph(target.newobjid(this.objid))
+    newobj.uncommitted = true
+    newobj.startPath(
+      this.pathpoints[0].x * this.isvgscale + this.preshift.x + shift.x,
+      this.pathpoints[0].y * this.isvgscale + this.preshift.y + shift.y,
+      this.gtype,
+      Color(
+        this.color.rgbNumber(),
+        this.penwidth * this.isvgscale,
+        this.pathpoints[0].press
+      )
+    )
+    for (let i = 1; i < this.pathpoints.length; i++) {
+      newobj.addToPath(
+        this.pathpoints[i].x * this.isvgscale + this.preshift.x + shift.x,
+        this.pathpoints[i].y * this.isvgscale + this.preshift.y + shift.y,
+        this.pathpoints[i].press
+      )
+    }
+    newobj.finishPath()
+    this.deselect()
+    return newobj
   }
 
   SVGPath() {
