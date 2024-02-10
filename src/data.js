@@ -1970,11 +1970,11 @@ export class DrawObjectGlyph extends DrawObject {
     this.gtype = type
     /*  workpathstart: "",
             workpathend:"Z", */
+    this.pressure = curpress
     this.pathpoints = [{ x: px, y: py, w: penw, press: this.pressure }]
     this.startradius = penw * 0.5
     this.penwidth = penwidth
     this.color = scolor
-    this.pressure = curpress
     this.area = {
       left: -2 * penw,
       right: 2 * penw,
