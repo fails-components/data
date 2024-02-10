@@ -1949,7 +1949,7 @@ export class DrawObjectGlyph extends DrawObject {
     return this.stornum
   }
 
-  startPath(x, y, type, color, width, pressure) {
+  startPath(x, y, type, color, width, pressure, iscopy) {
     const scolor = Color(color).hex()
 
     const penwidth = this.svgscale * width
@@ -1971,7 +1971,9 @@ export class DrawObjectGlyph extends DrawObject {
     /*  workpathstart: "",
             workpathend:"Z", */
     this.pressure = curpress
-    this.pathpoints = [{ x: px, y: py, w: penw, press: this.pressure }]
+    this.pathpoints = [
+      { x: px, y: py, w: penw, press: iscopy ? this.pressure : pressure }
+    ]
     this.startradius = penw * 0.5
     this.penwidth = penwidth
     this.color = scolor
@@ -1986,7 +1988,7 @@ export class DrawObjectGlyph extends DrawObject {
     this.clearRenderCache()
   }
 
-  addToPath(x, y, pressure) {
+  addToPath(x, y, pressure, iscopy) {
     const px = x * this.svgscale
     const py = y * this.svgscale
 
@@ -2018,7 +2020,12 @@ export class DrawObjectGlyph extends DrawObject {
     const ws = this.area
     const pw = wpenw
     this.lastpoint = { x: px, y: py }
-    this.pathpoints.push({ x: px, y: py, w: pw, press: this.pressure })
+    this.pathpoints.push({
+      x: px,
+      y: py,
+      w: pw,
+      press: iscopy ? pressure : this.pressure
+    })
     this.area = {
       left: Math.min(px - sx - 2 * pw, ws.left),
       right: Math.max(px - sx + 2 * pw, ws.right),
@@ -2105,7 +2112,8 @@ export class DrawObjectGlyph extends DrawObject {
           this.gtype,
           Color(this.color).rgbNumber(),
           this.penwidth * this.isvgscale,
-          this.pathpoints[0].press
+          this.pathpoints[0].press,
+          true /* iscopy */
         )
         for (let i = 1; i < this.pathpoints.length; i++) {
           target.sink.addToPath(
@@ -2114,7 +2122,8 @@ export class DrawObjectGlyph extends DrawObject {
             null,
             this.pathpoints[i].x * this.isvgscale + (this.preshift?.x ?? 0),
             this.pathpoints[i].y * this.isvgscale + (this.preshift?.y ?? 0),
-            this.pathpoints[i].press
+            this.pathpoints[i].press,
+            true /* iscopy */
           )
         }
         target.sink.finishPath(null, newobjid, target.clientnum)
@@ -2145,7 +2154,8 @@ export class DrawObjectGlyph extends DrawObject {
       this.gtype,
       Color(this.color).rgbNumber(),
       this.penwidth * this.isvgscale,
-      this.pathpoints[0].press
+      this.pathpoints[0].press,
+      true /* iscopy */
     )
     for (let i = 1; i < this.pathpoints.length; i++) {
       newobj.addToPath(
@@ -2155,7 +2165,8 @@ export class DrawObjectGlyph extends DrawObject {
         this.pathpoints[i].y * this.isvgscale +
           (this.preshift?.y ?? 0) +
           shift.y,
-        this.pathpoints[i].press
+        this.pathpoints[i].press,
+        true /* iscopy */
       )
     }
     newobj.finishPath()
