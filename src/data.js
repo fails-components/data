@@ -333,12 +333,12 @@ export class Container extends Sink {
       return
     }
     try {
-      const tempbuffer = new ArrayBuffer(96)
+      const tempbuffer = new ArrayBuffer(82)
       const dataview = new DataView(tempbuffer)
 
       dataview.setUint8(0, 10) // major command type, startApp is 10
 
-      dataview.setUint16(1, 80) // length  1..2
+      dataview.setUint16(1, 82) // length  1..2
       dataview.setUint8(3, 0) // reserved 3
       dataview.setFloat64(4, time) // 4..11
       // positioning
@@ -353,13 +353,13 @@ export class Container extends Sink {
       }
       dataview.setBigUint64(28, id64) // 28-35
       // now the sha
-      let dest = 33 // 33-64
+      let dest = 36 // 36-67
       for (let i = 0; i < 32 * 2; i += 2) {
         dataview.setUint8(dest, parseInt(id.substr(i, 2), 16))
         dest++
       }
       // parse uuid
-      dest = 65 // 65-80
+      dest = 68 // 68-81
       for (let i = 0; i < 36; i += 2) {
         if (appid.substr(i, 1) === '-') i++
         dataview.setUint8(dest, parseInt(appid.substr(i, 2), 16))
@@ -536,7 +536,7 @@ export class MemContainer extends Container {
         time = dataview.getFloat64(position + 8)
         break
       case 10:
-        if (position + 80 > this.storageSize) return 0 // should never happen
+        if (position + 82 > this.storageSize) return 0 // should never happen
         time = dataview.getFloat64(position + 4)
         break
       case 11:
@@ -603,7 +603,7 @@ export class MemContainer extends Container {
         objnum = dataview.getUint32(position + 4)
         break
       case 10:
-        if (position + 80 > this.storageSize) return 0 // should never happen
+        if (position + 82 > this.storageSize) return 0 // should never happen
         break
       case 11:
         if (position + 12 > this.storageSize) return 0 // should never happen
@@ -839,7 +839,7 @@ export class MemContainer extends Container {
       case 10:
         {
           // now replay the data
-          if (length < 80) {
+          if (length < 82) {
             // console.log("damaged data1",length,pos);
             return -1 // damaged data
           }
@@ -847,7 +847,7 @@ export class MemContainer extends Container {
           const id = id64.toString(36).padStart(9, '0')
           // ok read sha
           let sha = ''
-          let src = 33 // 33-64
+          let src = 36 // 36-67
           for (let i = 0; i < 32 * 2; i += 2) {
             const number = dataview.getUint8(pos + src)
             let str = number.toString(16).padStart(2, '0')
@@ -856,7 +856,7 @@ export class MemContainer extends Container {
             src++
           }
           // now the uuid
-          src = 65 // 65-80
+          src = 68 // 65-82
           let appid = ''
           for (let i = 0; i < 32; i += 2) {
             const number = dataview.getUint8(pos + src)
