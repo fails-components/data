@@ -66,6 +66,18 @@ export class Sink {
   moveObject(time, objnum, curclient, x, y) {
     // do nothing in base class, note a change of storagenum is not allowed
   }
+
+  startApp(time, x, y, width, height, id, sha, appid) {
+    // do nothing in base class
+  }
+
+  closeApp(time) {
+    // do nothing in base class
+  }
+
+  dataApp(time, buffer) {
+    // do nothing in base class
+  }
 }
 
 export class Container extends Sink {
@@ -301,6 +313,110 @@ export class Container extends Sink {
 
     this.pushArrayToStorage(tempbuffer)
   }
+
+  startApp(time, x, y, width, height, id, sha, appid) {
+    const buflength = sha.length / 2 // it is hex coded so two bytes per byte
+    if (buflength !== 32) {
+      console.log('sha not equal 256 bits!', sha, buflength)
+      return
+    }
+    if (appid.length !== 36) {
+      console.log('appid not equal to 36 bar streing ', appid)
+      return
+    }
+    try {
+      const tempbuffer = new ArrayBuffer(96)
+      const dataview = new DataView(tempbuffer)
+
+      dataview.setUint8(0, 10) // major command type, startApp is 10
+
+      dataview.setUint16(1, 96) // length  1..2
+      dataview.setUint8(3, 0) // reserved 3
+      dataview.setFloat64(4, time) // 4..11
+      // positioning
+      dataview.setFloat32(12, x) // 12-15
+      dataview.setFloat32(16, y) // 16-19
+      dataview.setFloat32(20, width) // 20-23
+      dataview.setFloat32(24, height) // 24-27
+      const id64 = BigInt('0x ' + id)
+      // We start with the id, it is 36 coded and 9 tokens long, which means max 6 bytes
+      dataview.setBigUint64(28, id64) // 28-35
+      // now the sha
+      let dest = 33 // 33-64
+      for (let i = 0; i < 32 * 2; i += 2) {
+        dataview.setUint8(dest, parseInt(id.substr(i, 2), 16))
+        dest++
+      }
+      // parse uuid
+      dest = 65 // 65-96
+      for (let i = 0; i < 36; i += 2) {
+        if (appid.substr(i, 2) === '-') i++
+        dataview.setUint8(dest, parseInt(appid.substr(i, 2), 16))
+        dest++
+      }
+      this.pushArrayToStorage(tempbuffer)
+    } catch (error) {
+      // TODO later fall silently
+      console.log('startApp problem', error)
+    }
+  }
+
+  closeApp(time) {
+    const tempbuffer = new ArrayBuffer(12)
+    const dataview = new DataView(tempbuffer)
+    dataview.setUint8(0, 11) // major command type, closeApp is 11
+    dataview.setUint16(1, 12) // length  1..2
+    dataview.setUint8(3, 0) // reserved 3
+    dataview.setFloat64(4, time) // 4..11
+    this.pushArrayToStorage(tempbuffer)
+  }
+
+  dataApp(time, buffer) {
+    // this one is tricky
+    const ab = buffer instanceof ArrayBuffer ? buffer : buffer.buffer
+    if (!ab) return
+    // header length is 8 bytes for the start, and 4 bytes for continuation
+    const length = ab.byteLength
+    let chunks = 1
+    let dvlength = 0
+    if (length >= 0xffff - 8) {
+      dvlength += 0xffff
+      const addchunks = Math.ceil((length - 0xffff + 8) / (0xffff - 4))
+      const lastchunklen = (length - 0xffff + 8) % (0xffff - 4)
+      dvlength += (addchunks - 1) * 0xffff
+      dvlength += lastchunklen + 4
+      chunks += addchunks
+    } else {
+      dvlength = 8 + length
+    }
+    const tempbuffer = new ArrayBuffer(dvlength)
+    const dataview = new DataView(tempbuffer)
+    const arrayview = new Uint8Array(tempbuffer)
+    let pos = 0
+    let remainlength = length
+    let bufferpos = 0
+    for (let chunk = 0; chunk < chunks; chunk++) {
+      const headersize = chunk === 0 ? 8 : 4
+      const payloadsize = Math.max(0xffff - headersize, remainlength)
+      dataview.setUint8(pos + 0, 12) // major command type, dataApp is 12
+      dataview.setUint16(pos + 1, Math.max(0xff, payloadsize + headersize)) // length  1..2
+      dataview.setUint8(
+        pos + 3,
+        chunk === 0 ? 1 /* default coding */ : 0 /* continue */
+      ) // coding 3
+      // if coding is
+      // 0 continuation
+      // 1 start with default coding
+      if (chunk === 0) dataview.setFloat64(pos + 4, time) // 4..11
+      pos += headersize
+      const ua = new Uint8Array(buffer, bufferpos, payloadsize)
+      arrayview.set(ua, pos)
+      pos += headersize
+      remainlength -= payloadsize
+      bufferpos += payloadsize
+    }
+    this.pushArrayToStorage(tempbuffer)
+  }
 }
 
 export class MemContainer extends Container {
@@ -390,6 +506,27 @@ export class MemContainer extends Container {
         if (position + 45 > this.storageSize) return 0 // should never happen
         time = dataview.getFloat64(position + 8)
         break
+      case 10:
+        if (position + 96 > this.storageSize) return 0 // should never happen
+        time = dataview.getFloat64(position + 4)
+        break
+      case 11:
+        if (position + 12 > this.storageSize) return 0 // should never happen
+        time = dataview.getFloat64(position + 4)
+        break
+      case 12:
+        {
+          // Note we only ensure header sizes here, not payload
+          const type = dataview.getUint8(position + 3)
+          if (type !== 0) {
+            // no continuation
+            if (position + 8 > this.storageSize) return 0 // should never happen
+            time = dataview.getFloat64(position + 4)
+          } else {
+            if (position + 4 > this.storageSize) return 0 // should never happen
+          }
+        }
+        break
     }
     return time
   }
@@ -431,6 +568,24 @@ export class MemContainer extends Container {
       case 9:
         if (position + 45 > this.storageSize) return 0 // should never happen
         objnum = dataview.getUint32(position + 4)
+        break
+      case 10:
+        if (position + 96 > this.storageSize) return 0 // should never happen
+        break
+      case 11:
+        if (position + 12 > this.storageSize) return 0 // should never happen
+        break
+      case 12:
+        {
+          // Note we only ensure header sizes here, not payload
+          const type = dataview.getUint8(position + 3)
+          if (type !== 0) {
+            // no continuation
+            if (position + 8 > this.storageSize) return 0 // should never happen
+          } else {
+            if (position + 4 > this.storageSize) return 0 // should never happen
+          }
+        }
         break
     }
     return objnum
@@ -628,6 +783,120 @@ export class MemContainer extends Container {
     }
     return commandstate
   }
+
+  reparseJupyter(datasink, pos) {
+    // First Check size
+    const dataview = new DataView(this.storage)
+    if (2 + pos > this.storageSize) {
+      // console.log("pos+2test",pos,this.storageSize, this);
+      return -1 // this was the last element
+    }
+    const command = dataview.getUint8(pos)
+    const length = dataview.getUint16(pos + 1)
+    if (length + pos > this.storageSize) {
+      // console.log("pos+lengthtest",pos,length,this.storageSize,command);
+      return -1 // this was the last element
+    }
+    // console.log("rdE",length,pos,command,this.storageSize);
+
+    switch (command) {
+      case 10:
+        {
+          // now replay the data
+          if (length < 96) {
+            // console.log("damaged data1",length,pos);
+            return -1 // damaged data
+          }
+          const id64 = dataview.getBigUint64(pos + 28) // 28-35
+          const id = id64.toString(36).padStart(9, '0')
+          // ok read sha
+          let sha = ''
+          let src = 33 // 33-64
+          for (let i = 0; i < 32 * 2; i += 2) {
+            const number = dataview.getUint8(pos + src)
+            let str = number.toString(16).padStart(2, '0')
+            if (str.length === 1) str = '0' + str
+            sha += str
+            src++
+          }
+          // now the uuid
+          src = 65 // 65-96
+          let appid = ''
+          for (let i = 0; i < 32; i += 2) {
+            const number = dataview.getUint8(pos + src)
+            appid += number.toString(16).padStart(2, '0')
+            if (i === 3 || i === 5 || i === 7 || i === 9) appid += '-'
+            src++
+          }
+          datasink.startApp(
+            dataview.getFloat64(pos + 4), // 4..11 time
+            dataview.getFloat32(pos + 12), // 12-15 x
+            dataview.getFloat32(pos + 16), // 16-19 y
+            dataview.getFloat32(pos + 20), // 20-23 width
+            dataview.getFloat32(pos + 24), // 24-27 height
+            id,
+            sha,
+            appid
+          )
+        }
+        break
+      case 11:
+        // now replay the data
+        if (length < 12) {
+          // console.log("damaged data1",length,pos);
+          return -1 // damaged data
+        }
+        datasink.closeApp(dataview.getFloat64(pos + 4))
+        break
+      case 12:
+        {
+          // this one is tricky, we need all frames in order to proceed
+          let payloadsize = 0
+          // sizescan
+          let scanpos = 0
+          let time
+          while (true) {
+            if (length < 4 + scanpos) {
+              return -1 // damaged data
+            }
+            const size = dataview.getUint16(pos + scanpos + +1)
+            const type = dataview.getUint8(pos + scanpos + 3)
+            if (scanpos > 0 && type !== 0 /* not continuation */) return -1 // damaged data
+            if (length < scanpos + size) {
+              return -1 // damaged data
+            }
+            if (type > 0) {
+              time = dataview.getFloat64(pos + scanpos + 4)
+            }
+            const headerlength = type !== 0 ? 8 : 4
+            payloadsize += size - headerlength
+            if (size !== 0xffff) break
+            scanpos += size
+          }
+          const data = new Uint8Array(payloadsize)
+          let copypos = 0
+          scanpos = 0
+          while (copypos !== payloadsize) {
+            const size = dataview.getUint16(pos + scanpos + +1)
+            const type = dataview.getUint8(pos + scanpos + 3)
+            const headerlength = type !== 0 ? 8 : 4
+            const payloadlen = size - headerlength
+            const srcArray = new Uint8Array(
+              dataview.buffer,
+              pos + scanpos + headerlength,
+              payloadlen
+            )
+            data.set(srcArray, copypos)
+            copypos += payloadlen
+            scanpos += size
+          }
+          datasink.dataApp(time, data)
+        }
+        break
+    }
+
+    return pos + length
+  }
 }
 
 export class CallbackContainer extends Container {
@@ -660,6 +929,7 @@ export class Collection extends Sink {
     this.containertype = containertype
     this.containerconfig = containerconfig
     this.commandcontainer = this.containertype('command', containerconfig)
+    this.jupytercontainer = this.containertype('jupyter', containerconfig)
   }
 
   setOnDirty(cb) {
@@ -813,6 +1083,18 @@ export class Collection extends Sink {
     this.commandcontainer.scrollBoard(time, clientnum, x, y)
   }
 
+  startApp(time, x, y, width, height, id, sha, appid) {
+    this.jupytercontainer.startApp(time, x, y, width, height, id, sha, appid)
+  }
+
+  closeApp(time) {
+    this.jupytercontainer.closeApp(time)
+  }
+
+  dataApp(time, buffer) {
+    this.jupytercontainer.dataApp(time, buffer)
+  }
+
   suggestRedraw(minareadrawn, maxareadrawn, curpostop, curposbottom) {
     // console.log("sugredraw",minareadrawn,maxareadrawn,curpostop,curposbottom);
 
@@ -914,6 +1196,13 @@ export class Collection extends Sink {
           contobjnum[target]
         )
       }
+    }
+  }
+
+  reparseJupyter(datasink) {
+    let pos = 0
+    while (pos >= 0) {
+      pos = this.commandcontainer.reparseJupyter(datasink, pos)
     }
   }
 
@@ -1130,6 +1419,29 @@ export class Dispatcher extends Sink {
     )
   }
 
+  startApp(time, x, y, width, height, id, sha, appid) {
+    if (this.blocked) return
+    let timeset = time
+    if (!timeset) timeset = now() - this.starttime
+    this.datasinklist.forEach((sink) =>
+      sink.startApp(time, x, y, width, height, id, sha, appid)
+    )
+  }
+
+  closeApp(time) {
+    if (this.blocked) return
+    let timeset = time
+    if (!timeset) timeset = now() - this.starttime
+    this.datasinklist.forEach((sink) => sink.closeApp(time))
+  }
+
+  dataApp(time, buffer) {
+    if (this.blocked) return
+    let timeset = time
+    if (!timeset) timeset = now() - this.starttime
+    this.datasinklist.forEach((sink) => sink.dataApp(time, buffer))
+  }
+
   setTimeandScrollPos(time, scrollx, scrolly) {
     if (time) {
       // time= now()-starttime
@@ -1257,6 +1569,35 @@ export class NetworkSink extends Sink {
     outobj.y = y
     this.sendfunc(outobj)
   }
+
+  startApp(time, x, y, width, height, id, sha, appid) {
+    return {
+      task: 'startApp',
+      time,
+      x,
+      y,
+      width,
+      height,
+      id,
+      sha,
+      appid
+    }
+  }
+
+  closeApp(time) {
+    return {
+      task: 'closeApp',
+      time
+    }
+  }
+
+  dataApp(time, buffer) {
+    return {
+      task: 'dataApp',
+      time,
+      buffer
+    }
+  }
 }
 
 export class NetworkSource {
@@ -1342,6 +1683,24 @@ export class NetworkSource {
         break
       case 'moveObject':
         sink.moveObject(data.time, data.objnum, data.clientnum, data.x, data.y)
+        break
+      case 'startApp':
+        sink.startApp(
+          data.time,
+          data.x,
+          data.y,
+          data.width,
+          data.height,
+          data.id,
+          data.sha,
+          data.appid
+        )
+        break
+      case 'closeApp':
+        sink.closeApp(data.time)
+        break
+      case 'dataApp':
+        sink.dataApp(data.time, data.buffer)
         break
     }
   }
