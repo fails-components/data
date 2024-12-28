@@ -319,6 +319,10 @@ export class Container extends Sink {
   }
 
   startApp(time, x, y, width, height, id, sha, appid) {
+    if (typeof id !== 'string') return
+    if (typeof sha !== 'string') return
+    if (typeof appid !== 'string') return
+
     const buflength = sha.length / 2 // it is hex coded so two bytes per byte
     if (buflength !== 32) {
       console.log('sha not equal 256 bits!', sha, buflength)
@@ -1631,7 +1635,7 @@ export class NetworkSink extends Sink {
   }
 
   startApp(time, x, y, width, height, id, sha, appid) {
-    return {
+    this.sendfunc({
       task: 'startApp',
       time,
       x,
@@ -1641,22 +1645,22 @@ export class NetworkSink extends Sink {
       id,
       sha,
       appid
-    }
+    })
   }
 
   closeApp(time) {
-    return {
+    this.sendfunc({
       task: 'closeApp',
       time
-    }
+    })
   }
 
   dataApp(time, buffer) {
-    return {
+    this.sendfunc({
       task: 'dataApp',
       time,
       buffer
-    }
+    })
   }
 
   moveApp(time, x, y, width, height, deactivate) {
