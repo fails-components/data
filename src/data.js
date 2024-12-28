@@ -346,8 +346,11 @@ export class Container extends Sink {
       dataview.setFloat32(16, y) // 16-19
       dataview.setFloat32(20, width) // 20-23
       dataview.setFloat32(24, height) // 24-27
-      const id64 = BigInt('0x ' + id)
+      let id64 = 0n
       // We start with the id, it is 36 coded and 9 tokens long, which means max 6 bytes
+      for (const num of id) {
+        id64 = id64 * 36n + BigInt(parseInt(num, 36))
+      }
       dataview.setBigUint64(28, id64) // 28-35
       // now the sha
       let dest = 33 // 33-64
