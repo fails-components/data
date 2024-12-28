@@ -71,6 +71,10 @@ export class Sink {
     // do nothing in base class
   }
 
+  moveApp(time, x, y, width, height) {
+    // do nothing in base class
+  }
+
   closeApp(time) {
     // do nothing in base class
   }
@@ -417,6 +421,24 @@ export class Container extends Sink {
     }
     this.pushArrayToStorage(tempbuffer)
   }
+
+  moveApp(time, x, y, width, height, deactivate) {
+    const tempbuffer = new ArrayBuffer(28)
+    const dataview = new DataView(tempbuffer)
+
+    dataview.setUint8(0, 13) // major command type, moveApp is 13
+
+    dataview.setUint16(1, 28) // length  1..2
+    dataview.setUint8(3, 0 | (deactivate && 0x1)) // reserved 3
+    dataview.setFloat64(4, time) // 4..11
+    // positioning
+    dataview.setFloat32(12, x) // 12-15
+    dataview.setFloat32(16, y) // 16-19
+    dataview.setFloat32(20, width) // 20-23
+    dataview.setFloat32(24, height) // 24-27
+
+    this.pushArrayToStorage(tempbuffer)
+  }
 }
 
 export class MemContainer extends Container {
@@ -527,6 +549,10 @@ export class MemContainer extends Container {
           }
         }
         break
+      case 13:
+        if (position + 28 > this.storageSize) return 0 // should never happen
+        time = dataview.getFloat64(position + 4)
+        break
     }
     return time
   }
@@ -586,6 +612,9 @@ export class MemContainer extends Container {
             if (position + 4 > this.storageSize) return 0 // should never happen
           }
         }
+        break
+      case 13:
+        if (position + 28 > this.storageSize) return 0 // should never happen
         break
     }
     return objnum
@@ -893,6 +922,24 @@ export class MemContainer extends Container {
           datasink.dataApp(time, data)
         }
         break
+      case 13:
+        {
+          // now replay the data
+          if (length < 28) {
+            // console.log("damaged data1",length,pos);
+            return -1 // damaged data
+          }
+          const properties = dataview.getInt8(pos + 3)
+          datasink.moveApp(
+            dataview.getFloat64(pos + 4), // 4..11 time
+            dataview.getFloat32(pos + 12), // 12-15 x
+            dataview.getFloat32(pos + 16), // 16-19 y
+            dataview.getFloat32(pos + 20), // 20-23 width
+            dataview.getFloat32(pos + 24), // 24-27 height
+            !!(properties & 0x1)
+          )
+        }
+        break
     }
 
     return pos + length
@@ -1093,6 +1140,10 @@ export class Collection extends Sink {
 
   dataApp(time, buffer) {
     this.jupytercontainer.dataApp(time, buffer)
+  }
+
+  moveApp(time, x, y, width, height, deactivate) {
+    this.jupytercontainer.moveApp(time, x, y, width, height, deactivate)
   }
 
   suggestRedraw(minareadrawn, maxareadrawn, curpostop, curposbottom) {
@@ -1442,6 +1493,15 @@ export class Dispatcher extends Sink {
     this.datasinklist.forEach((sink) => sink.dataApp(time, buffer))
   }
 
+  moveApp(time, x, y, width, height, deactivate) {
+    if (this.blocked) return
+    let timeset = time
+    if (!timeset) timeset = now() - this.starttime
+    this.datasinklist.forEach((sink) =>
+      sink.moveApp(time, x, y, width, height, deactivate)
+    )
+  }
+
   setTimeandScrollPos(time, scrollx, scrolly) {
     if (time) {
       // time= now()-starttime
@@ -1598,6 +1658,18 @@ export class NetworkSink extends Sink {
       buffer
     }
   }
+
+  moveApp(time, x, y, width, height, deactivate) {
+    return {
+      task: 'moveApp',
+      time,
+      x,
+      y,
+      width,
+      height,
+      deactivate
+    }
+  }
 }
 
 export class NetworkSource {
@@ -1702,6 +1774,15 @@ export class NetworkSource {
       case 'dataApp':
         sink.dataApp(data.time, data.buffer)
         break
+      case 'moveApp':
+        sink.moveApp(
+          data.time,
+          data.x,
+          data.y,
+          data.width,
+          data.height,
+          data.deactivate
+        )
     }
   }
 }
