@@ -1278,6 +1278,8 @@ export class Collection extends Sink {
   replaceStoredData(i, data) {
     if (i === 'command') {
       this.commandcontainer.replaceStoredData(data)
+    } else if (i === 'jupyter') {
+      this.jupytercontainer.replaceStoredData(data)
     } else {
       if (!(i in this.containers)) {
         this.containers[i] = this.containertype(i, this.containerconfig)
