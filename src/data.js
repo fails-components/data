@@ -1260,7 +1260,7 @@ export class Collection extends Sink {
   reparseJupyter(datasink) {
     let pos = 0
     while (pos >= 0) {
-      pos = this.commandcontainer.reparseJupyter(datasink, pos)
+      pos = this.jupytercontainer.reparseJupyter(datasink, pos)
     }
   }
 
