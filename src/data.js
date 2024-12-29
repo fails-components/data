@@ -355,7 +355,7 @@ export class Container extends Sink {
       // now the sha
       let dest = 36 // 36-67
       for (let i = 0; i < 32 * 2; i += 2) {
-        dataview.setUint8(dest, parseInt(id.substr(i, 2), 16))
+        dataview.setUint8(dest, parseInt(sha.substr(i, 2), 16))
         dest++
       }
       // parse uuid
@@ -850,18 +850,16 @@ export class MemContainer extends Container {
           let src = 36 // 36-67
           for (let i = 0; i < 32 * 2; i += 2) {
             const number = dataview.getUint8(pos + src)
-            let str = number.toString(16).padStart(2, '0')
-            if (str.length === 1) str = '0' + str
-            sha += str
+            sha += number.toString(16).padStart(2, '0')
             src++
           }
           // now the uuid
-          src = 68 // 65-84
+          src = 68 // 68-83
           let appid = ''
           for (let i = 0; i < 32; i += 2) {
             const number = dataview.getUint8(pos + src)
             appid += number.toString(16).padStart(2, '0')
-            if (i === 3 || i === 5 || i === 7 || i === 9) appid += '-'
+            if (i === 6 || i === 10 || i === 14 || i === 18) appid += '-'
             src++
           }
           datasink.startApp(
