@@ -1667,7 +1667,7 @@ export class NetworkSink extends Sink {
   }
 
   moveApp(time, x, y, width, height, deactivate) {
-    return {
+    this.sendfunc({
       task: 'moveApp',
       time,
       x,
@@ -1675,7 +1675,7 @@ export class NetworkSink extends Sink {
       width,
       height,
       deactivate
-    }
+    })
   }
 }
 
