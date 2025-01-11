@@ -408,9 +408,9 @@ export class Container extends Sink {
     let bufferpos = 0
     for (let chunk = 0; chunk < chunks; chunk++) {
       const headersize = chunk === 0 ? 8 : 4
-      const payloadsize = Math.max(0xffff - headersize, remainlength)
+      const payloadsize = Math.min(0xffff - headersize, remainlength)
       dataview.setUint8(pos + 0, 12) // major command type, dataApp is 12
-      dataview.setUint16(pos + 1, Math.max(0xff, payloadsize + headersize)) // length  1..2
+      dataview.setUint16(pos + 1, Math.min(0xffff, payloadsize + headersize)) // length  1..2
       dataview.setUint8(
         pos + 3,
         chunk === 0 ? 1 /* default coding */ : 0 /* continue */
