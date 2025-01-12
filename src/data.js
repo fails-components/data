@@ -20,7 +20,7 @@
 import Color from 'color'
 
 // eslint-disable-next-line no-undef
-const now = performance.now
+const now = () => performance.now()
 
 export class Sink {
   startPath(time, objnum, curclient, x, y, type, color, width, pressure) {
