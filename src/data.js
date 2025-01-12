@@ -1482,7 +1482,7 @@ export class Dispatcher extends Sink {
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
     this.datasinklist.forEach((sink) =>
-      sink.startApp(time, x, y, width, height, id, sha, appid)
+      sink.startApp(timeset, x, y, width, height, id, sha, appid)
     )
   }
 
@@ -1490,14 +1490,14 @@ export class Dispatcher extends Sink {
     if (this.blocked) return
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
-    this.datasinklist.forEach((sink) => sink.closeApp(time))
+    this.datasinklist.forEach((sink) => sink.closeApp(timeset))
   }
 
   dataApp(time, buffer) {
     if (this.blocked) return
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
-    this.datasinklist.forEach((sink) => sink.dataApp(time, buffer))
+    this.datasinklist.forEach((sink) => sink.dataApp(timeset, buffer))
   }
 
   moveApp(time, x, y, width, height, deactivate) {
@@ -1505,7 +1505,7 @@ export class Dispatcher extends Sink {
     let timeset = time
     if (!timeset) timeset = now() - this.starttime
     this.datasinklist.forEach((sink) =>
-      sink.moveApp(time, x, y, width, height, deactivate)
+      sink.moveApp(timeset, x, y, width, height, deactivate)
     )
   }
 
