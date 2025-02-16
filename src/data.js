@@ -329,7 +329,7 @@ export class Container extends Sink {
       return
     }
     if (appid.length !== 36) {
-      console.log('appid not equal to 36 bar streing ', appid)
+      console.log('appid not equal to 36 char string ', appid)
       return
     }
     try {
